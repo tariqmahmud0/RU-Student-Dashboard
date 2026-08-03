@@ -1,0 +1,6 @@
+{
+  "name": "RU Student Dashboard",
+  "description": "Student-facing portal for University of Rajshahi students to view profile, academic results, course marks, fee records, and notices.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

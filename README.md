@@ -332,6 +332,6 @@ Built as an independent student project for University of Rajshahi students.
 
 </div>
 
-<a href="https://ru-student-dashboard.vercel.app/" target="_blank">RU Student Dashboard Vercel</a>
-<a href="https://ru-student-dashboard.onrender.com" target="_blank">RU Student Dashboard Render</a>
-<a href="https://rustudent.netlify.app" target="_blank">RU Student Dashboard Netlify</a>
+<a href="https://ru-student-dashboard.vercel.app/" target="_blank">RU Student Dashboard Vercel</a> <br>
+<a href="https://ru-student-dashboard.onrender.com" target="_blank">RU Student Dashboard Render</a><br>
+<a href="https://rustudent.netlify.app" target="_blank">RU Student Dashboard Netlify</a><br>

@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/proxy/:path*",
+      "destination": "https://eresult.ru.ac.bd:9603/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

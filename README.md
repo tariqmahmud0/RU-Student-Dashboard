@@ -6,8 +6,11 @@
 
 A modern, responsive web application for accessing student academic information through the University of Rajshahi Exam Portal APIs.
 
-**Results • Course History • Internal Marks • Fees • Notices • Admit Card • Money Receipt**
-
+**Results • Course History • Internal Marks • Fees • Notices • Admit Card • Money Receipt** <br>
+<br>
+<a href="https://ru-student-dashboard.vercel.app/" target="_blank">RU Student Dashboard Vercel</a>&nbsp;&nbsp;&nbsp;
+<a href="https://ru-student-dashboard.onrender.com" target="_blank">RU Student Dashboard Render</a>&nbsp;&nbsp;&nbsp;
+<a href="https://rustudent.netlify.app" target="_blank">RU Student Dashboard Netlify</a>
 </div>
 
 ---
@@ -332,6 +335,4 @@ Built as an independent student project for University of Rajshahi students.
 
 </div>
 
-<a href="https://ru-student-dashboard.vercel.app/" target="_blank">RU Student Dashboard Vercel</a> <br>
-<a href="https://ru-student-dashboard.onrender.com" target="_blank">RU Student Dashboard Render</a><br>
-<a href="https://rustudent.netlify.app" target="_blank">RU Student Dashboard Netlify</a><br>
+

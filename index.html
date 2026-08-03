@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>University of Rajshahi App</title>
+    <script>
+      window.addEventListener('error', function(e) {
+        document.body.innerHTML += '<div style="color:red">' + e.message + '</div>';
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,250 +1,103 @@
-# 🎓 RU Student Dashboard
+# RU Student Dashboard
 
-A simple and modern student dashboard built for University of Rajshahi students.
-
-I started this project to make academic information from the RU Exam Portal easier to view and navigate. Instead of going through different sections of the portal, the dashboard brings the important information together in one clean interface.
-
-Students can log in with their own account and view the information available for that account.
+A secure, responsive student-facing dashboard for University of Rajshahi students to view academic profiles, semester course marks, published examination results, fee collection history, and university notices.
 
 ---
 
-## ✨ What can you do with it?
+## 📌 Architecture & Technology Stack
 
-After logging in, the dashboard can show information such as:
-
-- 👤 Student profile and photograph
-- 🎓 Academic information
-- 📚 Course history
-- 📊 Semester-wise results
-- 📝 Internal, final and total marks
-- ⭐ Grades and GPA
-- 💳 Fees and payment history
-- 📢 Student notices
-- 🏠 Hall notices
-- 🎫 Admit card
-- 🧾 Money receipt
-
-The available information depends on what is currently provided by the RU system for the logged-in student.
+- **Frontend**: React 19, TypeScript, Tailwind CSS v4, Lucide Icons, Motion.
+- **Backend / Proxy**: Express.js server providing Vite development middleware and a secure, zero-persistence fallback proxy (`/api/proxy/*`) to seamlessly handle cross-origin or port 9603 network restrictions in browser preview sandboxes.
+- **API Integration**: Direct connection to the official University of Rajshahi e-result API endpoint (`https://eresult.ru.ac.bd:9603/api`).
 
 ---
 
-## 🔐 Login
+## 🔐 Key Security & Design Principles
 
-Students use their own **Student ID and password** to log in.
-
-After a successful login, the application identifies the current student and loads the information connected with that account.
-
-There is no need to manually enter an internal student ID or change the source code for different students.
-
-```text
-Student Login
-      ↓
-Authentication
-      ↓
-Current Student Identified
-      ↓
-Profile & Photograph
-      ↓
-Course History & Results
-      ↓
-Fees & Notices
-      ↓
-Available Documents
-```
+1. **Strict Non-Admin Scope**: The application is strictly student-facing. It never enumerates student IDs or attempts to access another student's private data.
+2. **Universal Multi-Account Support**: Zero hardcoded student IDs (such as `2157` or `2164`). The application dynamically discovers the authenticated user's internal `studentInfoId` at login.
+3. **In-Memory Token Management**: JWT tokens and private profile details are held only in JavaScript memory during the active session. They are never stored in `localStorage` or `sessionStorage` and are completely purged upon Logout.
+4. **Mark Nomenclature Mapping**: As required by university grading standards, the backend field `caMark` is displayed to students as **"Internal Mark"** (never "CA Mark").
+5. **Zero Mock Data**: All displayed profile details, GPA scores, course marks, fee collection records, and notices are fetched directly from the authenticated user's account APIs.
 
 ---
 
-## 👤 Student Profile
+## 🔄 Complete API & Authentication Flow
 
-The Profile section provides an organized view of student information such as:
+1. **Public Info Fetch**:
+   `GET /public/sya/company-info/get-by-id/1`
+   Loads university branding, English name, Bangla name (*রাজশাহী বিশ্ববিদ্যালয়*), logo, background, and address.
 
-- Name
-- Student ID
-- Photograph
-- Session
-- Program
-- Faculty
-- Department
-- Year & Semester
-- Residence Hall
-- Residential Status
+2. **Student Login**:
+   `POST /auth/login`
+   Request Body:
+   ```json
+   {
+     "username": "<STUDENT_ID>",
+     "password": "<PASSWORD>",
+     "userTypeId": 2
+   }
+   ```
+   Receives authentication status and JWT `token`.
 
-The student photograph is also loaded dynamically based on the information returned for the logged-in account.
+3. **Dynamic Student ID Discovery**:
+   `GET /private/student/course-attendance/course-attendance-details-by-app-user-id`
+   Inspects the returned master record array to extract `master.studentInfoId` dynamically for the current session.
 
----
-
-## 📚 Course History & Results
-
-One of the main goals of this project is to make academic results easier to read.
-
-Results can be viewed semester by semester with information such as:
-
-| Information | Description |
-|---|---|
-| Course Code | Official course code |
-| Course Title | Name of the course |
-| Credit | Course credit |
-| Internal Mark | Internal/continuous assessment mark |
-| Final Mark | Final examination mark |
-| Total Mark | Combined mark |
-| Grade | Letter grade |
-| Grade Point | Grade point |
-
-Semester GPA and other available result information are also shown where provided.
-
-> The backend `caMark` value is displayed as **Internal Mark** in the dashboard for easier understanding.
+4. **Private Student Data Retrieval**:
+   - **Profile**: `GET /private/student/student-info/get-by-id/${studentInfoId}`
+   - **Course Marks & GPA**: `GET /private/student/course-mark/get-course-mark-by-student-id/${studentInfoId}`
+   - **Fee Collections**: `GET /private/student/fees-collection/get-by-student-id/${studentInfoId}/0`
+   - **Recent Notices**: `GET /private/student/notice/get-last-five-notice-list-for-student-by-app-user-id`
+   - **Hall Notices**: `GET /private/student/notice/get-hall-notice-list-for-student-by-app-user-id`
 
 ---
 
-## 💳 Fees
+## 📊 Mark Nomenclature Mapping Table
 
-The Fees section is designed to make fee and payment information easier to understand.
-
-Students can view the fee records available for their account and, where supported by the RU system, access related documents such as:
-
-**🎫 Admit Card**  
-**🧾 Money Receipt**
-
-These actions are connected with the relevant student records rather than being based on hardcoded student information.
+| Backend Field | UI Display Heading | Notes |
+| :--- | :--- | :--- |
+| `caMark` | **Internal Mark** | Displayed as Internal Mark per specification |
+| `finalMark` | **Final Mark** | Final examination score |
+| `totalMark` | **Total Mark** | Combined total score |
+| `null` / `undefined` | **—** | Null values rendered as dash, never coerced to `0` |
 
 ---
 
-## 📢 Notices
+## 🛠️ Local Development & Running
 
-The dashboard also brings together available:
+### Prerequisites
+- Node.js 18+ installed
 
-- General student notices
-- Recent notices
-- Hall notices
-
-This makes it easier to check important updates without moving through multiple pages.
-
----
-
-## 📱 Built for Mobile Too
-
-The dashboard is responsive, so it can be used comfortably on:
-
-**Desktop • Laptop • Tablet • Android • iPhone**
-
-Tables and other large sections are designed to remain usable on smaller screens.
-
----
-
-## 🛠️ Built With
-
-The project uses modern web technologies such as:
-
-- React
-- TypeScript / JavaScript
-- Vite
-- HTML & CSS
-- REST API integration
-- Bearer-token authentication
-- Responsive web design
-
----
-
-## 🚀 Running the Project
-
-Clone the repository:
-
-```bash
-git clone <your-repository-url>
-```
-
-Go to the project directory:
-
-```bash
-cd ru-student-dashboard
-```
-
-Install the dependencies:
-
-```bash
-npm install
-```
-
-Start the development server:
-
+### Development Server
 ```bash
 npm run dev
 ```
+Starts the Express + Vite server at `http://localhost:3000`.
 
-For a production build:
-
+### Production Build & Launch
 ```bash
 npm run build
+npm start
 ```
 
 ---
 
-## 🔒 Privacy
+## 🧪 Testing Checklist
 
-Student privacy is important for this project.
-
-The repository should never contain:
-
-- Student passwords
-- Authentication tokens
-- Authorization headers
-- Private student records
-- Hardcoded personal information
-- Secret environment variables
-
-The application is intended to work with the **currently authenticated student's own account and information**.
-
-If you are contributing to the project, please never include your password, token, or private student information in an issue or pull request.
+1. **Successful Login**: Enter valid student ID & password. Observe smooth transition into student dashboard.
+2. **Invalid Login**: Enter wrong password or ID. Confirm clear error banner ("Invalid Student ID or password.").
+3. **Dynamic studentInfoId Discovery**: Log in with different student accounts. Verify that `studentInfoId` is resolved dynamically without hardcoding.
+4. **Profile Loading**: Check that name, roll, department, hall, session, and photo load correctly.
+5. **Result Loading**: View semester-wise cards with GPA, pass status, and earned credits.
+6. **Internal Mark Mapping**: Check result tables to confirm `caMark` appears as **"Internal Mark"**.
+7. **Different Student Accounts**: Logout and log in as a second student account. Confirm zero stale data from the previous account.
+8. **Logout**: Click Logout. Confirm token and state are cleared and user returns to login screen.
+9. **Expired Token / Error Handling**: Network errors or expired tokens show human-readable banners with a retry button.
+10. **Mobile Responsiveness**: Test on mobile or tablet dimensions. Verify result tables support smooth horizontal scrolling.
 
 ---
 
-## ⚠️ Disclaimer
+## 🔒 CORS & Proxy Details
 
-**RU Student Dashboard is an independent student project.**
-
-It is **not an official University of Rajshahi website or application**, and it is not maintained or endorsed by the University of Rajshahi.
-
-The official university systems remain the authoritative source for academic records and information. Important information should always be verified through the official portal.
-
----
-
-## 🌱 Why I Built This
-
-The idea behind this project is simple: make the student portal experience cleaner, easier to navigate, and more convenient—especially on mobile devices.
-
-There is still room for improvement, and I plan to continue working on the project as I learn more and as the available student services evolve.
-
-Some ideas for the future:
-
-- Better result visualization
-- GPA and academic progress charts
-- Improved fee history
-- Better semester filtering
-- Notice notifications
-- Dark mode
-- PWA/mobile experience
-- Improved document management
-
----
-
-## 🤝 Contributions
-
-Found a bug or have an idea?
-
-Feel free to open an **Issue** or submit a **Pull Request**.
-
-When reporting a problem, please remove any personal information, passwords, or authentication tokens from screenshots and logs.
-
----
-
-<div align="center">
-
-### 🎓 RU Student Dashboard
-
-**Making RU academic information a little easier to access.**
-
-</div>
-
-<a href="https://ru-student-dashboard.vercel.app/" target="_blank">RU Student Dashboard</a>
-
-<a href="https://ru-student-dashboard.onrender.com" target="_blank">RU Student Dashboard API</a>
+The frontend first attempts a direct fetch to `https://eresult.ru.ac.bd:9603/api`. If browser security or cross-origin restrictions block port 9603 in preview environments, requests fall back seamlessly to the server proxy at `/api/proxy/*`. The proxy forwards authorization headers without logging or persisting credentials.

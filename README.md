@@ -245,9 +245,6 @@ When reporting a problem, please remove any personal information, passwords, or 
 
 </div>
 
-```bash
-https://ru-student-dashboard.vercel.app/
-```
-```bash
-https://ru-student-dashboard.onrender.com
-```
+<a href="https://ru-student-dashboard.vercel.app/" target="_blank">RU Student Dashboard</a>
+
+<a href="https://ru-student-dashboard.onrender.com" target="_blank">RU Student Dashboard API</a>

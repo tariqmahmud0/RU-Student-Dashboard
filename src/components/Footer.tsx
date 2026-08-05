@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, FileText, AlertTriangle, Activity, X, Globe } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Activity, X, Globe, Download } from 'lucide-react';
 
 type Language = 'en' | 'bn';
 type DocumentType = 'terms' | 'privacy' | 'disclaimer' | 'uptime' | null;
@@ -196,7 +196,10 @@ function UptimeGraph() {
       </div>
 
       {/* Chart */}
-      <div className="mt-8 relative h-32 flex items-end gap-1 ml-6 sm:ml-8 border-b border-slate-800/80 pb-1">
+      <div className="mt-8 relative h-32 flex items-end gap-1 ml-8 sm:ml-10 border-b border-slate-800/80 pb-1">
+        <span className="absolute -left-10 sm:-left-12 top-1/2 -translate-y-1/2 -translate-x-1/2 -rotate-90 text-[9px] text-slate-600 font-mono whitespace-nowrap">
+          Resp. Time (ms)
+        </span>
         {/* Y-axis guidelines */}
         <div className="absolute inset-0 flex flex-col justify-between text-[9px] text-slate-500 pb-1 -left-6 sm:-left-8 font-mono">
           <div className="relative"><span className="absolute -top-1.5">{maxMs}</span><div className="absolute left-5 sm:left-7 w-[calc(100%+1.5rem)] sm:w-[calc(100%+2rem)] border-t border-slate-800/50"></div></div>
@@ -228,8 +231,7 @@ function UptimeGraph() {
           })}
         </div>
       </div>
-      <div className="flex justify-between items-center text-[9px] text-slate-600 mt-2 font-mono pl-6 sm:pl-8">
-         <span className="-rotate-90 origin-left absolute -translate-x-6 sm:-translate-x-8 -translate-y-8 mt-12 whitespace-nowrap">Resp. Time (ms)</span>
+      <div className="flex justify-between items-center text-[9px] text-slate-600 mt-2 font-mono pl-8 sm:pl-10">
          <span>Session Start</span>
          <span>Now</span>
       </div>
@@ -256,6 +258,29 @@ function UptimeGraph() {
 export function Footer({ children }: { children?: React.ReactNode }) {
   const [lang, setLang] = useState<Language>('en');
   const [activeDoc, setActiveDoc] = useState<DocumentType>(null);
+  const [isDownloadingApp, setIsDownloadingApp] = useState(false);
+
+  const handleDownloadLatestApp = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    try {
+      setIsDownloadingApp(true);
+      const response = await fetch("https://api.github.com/repos/tariqmahmud0/RU-Student/releases/latest");
+      if (!response.ok) {
+        throw new Error("Failed to fetch latest release");
+      }
+      const release = await response.json();
+      const apk = release.assets.find((asset: any) => asset.name.toLowerCase().endsWith(".apk"));
+      if (!apk) {
+        throw new Error("APK not found");
+      }
+      window.location.href = apk.browser_download_url;
+    } catch (error) {
+      console.error(error);
+      alert("Unable to download the latest version. Please try again.");
+    } finally {
+      setIsDownloadingApp(false);
+    }
+  };
 
   const t = commonStrings[lang];
 
@@ -302,6 +327,15 @@ export function Footer({ children }: { children?: React.ReactNode }) {
             </span>
             {t.links.uptime}
           </button>
+          <a
+            href="#"
+            id="downloadLatestApp"
+            onClick={handleDownloadLatestApp}
+            className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5"
+          >
+            <Download className="w-4 h-4" />
+            {isDownloadingApp ? "Finding latest version..." : "Download App"}
+          </a>
         </div>
       </div>
 

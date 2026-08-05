@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, FileText, AlertTriangle, Activity, X, Globe } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Activity, X, Globe, Download } from 'lucide-react';
 
 type Language = 'en' | 'bn';
 type DocumentType = 'terms' | 'privacy' | 'disclaimer' | 'uptime' | null;
@@ -113,7 +113,7 @@ const commonStrings = {
 function UptimeGraph() {
   const [data, setData] = useState<{ms: number, status: 'up' | 'down'}[]>([]);
   const [status, setStatus] = useState<'checking' | 'up' | 'down'>('checking');
-  
+
   useEffect(() => {
     let mounted = true;
     const checkPing = async () => {
@@ -132,7 +132,7 @@ function UptimeGraph() {
          }
       }
     };
-    
+
     checkPing();
     const int = setInterval(checkPing, 3000);
     return () => { mounted = false; clearInterval(int); };
@@ -141,7 +141,7 @@ function UptimeGraph() {
   const totalChecks = data.length;
   const upChecks = data.filter(d => d.status === 'up').length;
   const sessionUptime = totalChecks > 0 ? ((upChecks / totalChecks) * 100).toFixed(2) : '100.00';
-  
+
   const upMs = data.filter(d => d.status === 'up').map(d => d.ms);
   const avgResponse = upMs.length > 0 ? Math.round(upMs.reduce((a, b) => a + b, 0) / upMs.length) : 0;
   const currentResponse = upMs.length > 0 ? upMs[upMs.length - 1] : 0;
@@ -164,8 +164,8 @@ function UptimeGraph() {
          <div className="flex-1 min-w-0">
             <div className="flex gap-[2px] sm:gap-1 items-end h-8">
               {pills.map((st, i) => (
-                <div 
-                  key={i} 
+                <div
+                  key={i}
                   className={`flex-1 rounded-full ${st === 'up' ? 'bg-[#5eead4] h-full shadow-[0_0_8px_rgba(94,234,212,0.4)]' : st === 'down' ? 'bg-rose-500 h-full' : 'bg-slate-800 h-1/2 opacity-50'}`}
                 ></div>
               ))}
@@ -196,14 +196,17 @@ function UptimeGraph() {
       </div>
 
       {/* Chart */}
-      <div className="mt-8 relative h-32 flex items-end gap-1 ml-6 sm:ml-8 border-b border-slate-800/80 pb-1">
+      <div className="mt-8 relative h-32 flex items-end gap-1 ml-8 sm:ml-10 border-b border-slate-800/80 pb-1">
+        <span className="absolute -left-10 sm:-left-12 top-1/2 -translate-y-1/2 -translate-x-1/2 -rotate-90 text-[9px] text-slate-600 font-mono whitespace-nowrap">
+          Resp. Time (ms)
+        </span>
         {/* Y-axis guidelines */}
         <div className="absolute inset-0 flex flex-col justify-between text-[9px] text-slate-500 pb-1 -left-6 sm:-left-8 font-mono">
           <div className="relative"><span className="absolute -top-1.5">{maxMs}</span><div className="absolute left-5 sm:left-7 w-[calc(100%+1.5rem)] sm:w-[calc(100%+2rem)] border-t border-slate-800/50"></div></div>
           <div className="relative"><span className="absolute -top-1.5">{Math.round(maxMs/2)}</span><div className="absolute left-5 sm:left-7 w-[calc(100%+1.5rem)] sm:w-[calc(100%+2rem)] border-t border-slate-800/50"></div></div>
           <div className="relative"><span className="absolute -top-1.5">0</span></div>
         </div>
-        
+
         {/* Bars */}
         <div className="flex-1 h-full flex items-end gap-[1px] sm:gap-[2px] z-10 pl-1">
           {Array.from({ length: 60 }).map((_, i) => {
@@ -213,8 +216,8 @@ function UptimeGraph() {
                 const height = d.ms > 0 ? Math.max((d.ms / maxMs) * 100, 2) : 0;
                 return (
                   <div key={i} className="flex-1 flex flex-col justify-end h-full group relative">
-                    <div 
-                      className={`w-full rounded-t-[1px] transition-all duration-300 ${d.ms > 1000 ? 'bg-rose-500' : d.ms > 400 ? 'bg-amber-400' : 'bg-[#5eead4]/80 group-hover:bg-[#5eead4]'}`} 
+                    <div
+                      className={`w-full rounded-t-[1px] transition-all duration-300 ${d.ms > 1000 ? 'bg-rose-500' : d.ms > 400 ? 'bg-amber-400' : 'bg-[#5eead4]/80 group-hover:bg-[#5eead4]'}`}
                       style={{ height: `${height}%` }}
                     ></div>
                     {/* Tooltip on hover */}
@@ -228,8 +231,7 @@ function UptimeGraph() {
           })}
         </div>
       </div>
-      <div className="flex justify-between items-center text-[9px] text-slate-600 mt-2 font-mono pl-6 sm:pl-8">
-         <span className="-rotate-90 origin-left absolute -translate-x-6 sm:-translate-x-8 -translate-y-8 mt-12 whitespace-nowrap">Resp. Time (ms)</span>
+      <div className="flex justify-between items-center text-[9px] text-slate-600 mt-2 font-mono pl-8 sm:pl-10">
          <span>Session Start</span>
          <span>Now</span>
       </div>
@@ -256,13 +258,36 @@ function UptimeGraph() {
 export function Footer({ children }: { children?: React.ReactNode }) {
   const [lang, setLang] = useState<Language>('en');
   const [activeDoc, setActiveDoc] = useState<DocumentType>(null);
+  const [isDownloadingApp, setIsDownloadingApp] = useState(false);
+
+  const handleDownloadLatestApp = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    try {
+      setIsDownloadingApp(true);
+      const response = await fetch("https://api.github.com/repos/tariqmahmud0/RU-Student/releases/latest");
+      if (!response.ok) {
+        throw new Error("Failed to fetch latest release");
+      }
+      const release = await response.json();
+      const apk = release.assets.find((asset: any) => asset.name.toLowerCase().endsWith(".apk"));
+      if (!apk) {
+        throw new Error("APK not found");
+      }
+      window.location.href = apk.browser_download_url;
+    } catch (error) {
+      console.error(error);
+      alert("Unable to download the latest version. Please try again.");
+    } finally {
+      setIsDownloadingApp(false);
+    }
+  };
 
   const t = commonStrings[lang];
 
   const getDocData = () => {
     if (!activeDoc) return null;
     const doc = docsData[activeDoc][lang];
-    
+
     let icon = <FileText className="w-5 h-5" />;
     if (activeDoc === 'privacy') icon = <Shield className="w-5 h-5" />;
     if (activeDoc === 'disclaimer') icon = <AlertTriangle className="w-5 h-5" />;
@@ -276,7 +301,7 @@ export function Footer({ children }: { children?: React.ReactNode }) {
   return (
     <footer className="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 z-20 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-4">
-        
+
         {/* Previous Text Container */}
         {children && (
           <div className="w-full text-center text-xs text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2">
@@ -302,6 +327,15 @@ export function Footer({ children }: { children?: React.ReactNode }) {
             </span>
             {t.links.uptime}
           </button>
+          <a
+            href="#"
+            id="downloadLatestApp"
+            onClick={handleDownloadLatestApp}
+            className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5"
+          >
+            <Download className="w-4 h-4" />
+            {isDownloadingApp ? "Finding latest version..." : "Download App"}
+          </a>
         </div>
       </div>
 

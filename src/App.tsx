@@ -33,15 +33,19 @@ import { ErrorAlert } from './components/ErrorAlert';
 import { Footer } from './components/Footer';
 import { Building2, ArrowLeft, Sun, Moon } from 'lucide-react';
 
-export default function App() {
-  const [isGuestDirectoryOpen, setIsGuestDirectoryOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    const saved = localStorage.getItem('ru_theme');
-    if (saved === 'dark' || saved === 'light') return saved;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+const STORAGE_KEYS = {
+  TOKEN: 'ru_auth_token',
+  STUDENT_INFO_ID: 'ru_student_info_id',
+  PROFILE: 'ru_student_profile',
+  RESULTS: 'ru_results',
+  FEES: 'ru_fees',
+  RECENT_NOTICES: 'ru_recent_notices',
+  HALL_NOTICES: 'ru_hall_notices',
+  ACTIVE_TAB: 'ru_active_tab',
+};
 
-  const [state, setState] = useState<AppState>({
+function getInitialState(): AppState {
+  const defaultState: AppState = {
     token: null,
     studentInfoId: null,
     companyInfo: null,
@@ -54,7 +58,75 @@ export default function App() {
     othersSubView: 'directory',
     isLoading: false,
     error: null,
+  };
+
+  try {
+    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+    const studentInfoIdStr = localStorage.getItem(STORAGE_KEYS.STUDENT_INFO_ID);
+
+    if (token && studentInfoIdStr) {
+      const studentInfoId = parseInt(studentInfoIdStr, 10);
+      const profile = JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILE) || 'null');
+      const results = JSON.parse(localStorage.getItem(STORAGE_KEYS.RESULTS) || '[]');
+      const fees = JSON.parse(localStorage.getItem(STORAGE_KEYS.FEES) || '[]');
+      const recentNotices = JSON.parse(localStorage.getItem(STORAGE_KEYS.RECENT_NOTICES) || '[]');
+      const hallNotices = JSON.parse(localStorage.getItem(STORAGE_KEYS.HALL_NOTICES) || '[]');
+      const activeTab = (localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB) as TabType) || 'overview';
+
+      return {
+        ...defaultState,
+        token,
+        studentInfoId,
+        profile,
+        results,
+        fees,
+        recentNotices,
+        hallNotices,
+        activeTab: activeTab || 'overview',
+      };
+    }
+  } catch (_e) {
+    // Fall back to default
+  }
+
+  return defaultState;
+}
+
+function saveSession(data: {
+  token: string;
+  studentInfoId: number;
+  profile?: any;
+  results?: any[];
+  fees?: any[];
+  recentNotices?: any[];
+  hallNotices?: any[];
+}) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
+    localStorage.setItem(STORAGE_KEYS.STUDENT_INFO_ID, String(data.studentInfoId));
+    if (data.profile) localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(data.profile));
+    if (data.results) localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(data.results));
+    if (data.fees) localStorage.setItem(STORAGE_KEYS.FEES, JSON.stringify(data.fees));
+    if (data.recentNotices) localStorage.setItem(STORAGE_KEYS.RECENT_NOTICES, JSON.stringify(data.recentNotices));
+    if (data.hallNotices) localStorage.setItem(STORAGE_KEYS.HALL_NOTICES, JSON.stringify(data.hallNotices));
+  } catch (_e) {}
+}
+
+function clearSession() {
+  try {
+    Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
+  } catch (_e) {}
+}
+
+export default function App() {
+  const [isGuestDirectoryOpen, setIsGuestDirectoryOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('ru_theme');
+    if (saved === 'dark' || saved === 'light') return saved;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
+
+  const [state, setState] = useState<AppState>(getInitialState);
 
   const [authLoading, setAuthLoading] = useState<boolean>(false);
 
@@ -80,6 +152,47 @@ export default function App() {
         setState((prev) => ({ ...prev, companyInfo: info }));
       }
     });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Silently revalidate latest student data in background on mount if restored from saved session
+  useEffect(() => {
+    const savedToken = state.token;
+    const savedId = state.studentInfoId;
+    if (!savedToken || !savedId) return;
+
+    let isMounted = true;
+    Promise.all([
+      getStudentProfile(savedToken, savedId).catch(() => null),
+      getCourseMarks(savedToken, savedId).catch(() => null),
+      getFeeRecords(savedToken, savedId).catch(() => null),
+      getRecentNotices(savedToken).catch(() => null),
+      getHallNotices(savedToken).catch(() => null),
+    ]).then(([freshProfile, freshResults, freshFees, freshRecentNotices, freshHallNotices]) => {
+      if (!isMounted) return;
+      if (freshProfile) {
+        setState((prev) => ({
+          ...prev,
+          profile: freshProfile,
+          results: freshResults && freshResults.length ? freshResults : prev.results,
+          fees: freshFees && freshFees.length ? freshFees : prev.fees,
+          recentNotices: freshRecentNotices && freshRecentNotices.length ? freshRecentNotices : prev.recentNotices,
+          hallNotices: freshHallNotices && freshHallNotices.length ? freshHallNotices : prev.hallNotices,
+        }));
+        saveSession({
+          token: savedToken,
+          studentInfoId: savedId,
+          profile: freshProfile,
+          results: freshResults || undefined,
+          fees: freshFees || undefined,
+          recentNotices: freshRecentNotices || undefined,
+          hallNotices: freshHallNotices || undefined,
+        });
+      }
+    }).catch(() => {});
+
     return () => {
       isMounted = false;
     };
@@ -130,6 +243,16 @@ export default function App() {
           getHallNotices(jwtToken),
         ]);
 
+      saveSession({
+        token: jwtToken,
+        studentInfoId: resolvedStudentInfoId,
+        profile: profileData,
+        results: courseMarksData,
+        fees: feeRecordsData,
+        recentNotices: recentNoticesData,
+        hallNotices: hallNoticesData,
+      });
+
       setState((prev) => ({
         ...prev,
         token: jwtToken,
@@ -154,9 +277,10 @@ export default function App() {
 
   /**
    * Secure Logout:
-   * Clears token and student datasets from memory.
+   * Clears token and student datasets from storage and memory.
    */
   const handleLogout = () => {
+    clearSession();
     setState((prev) => ({
       ...prev,
       token: null,
@@ -172,10 +296,13 @@ export default function App() {
   };
 
   /**
-   * Tab Navigation Switcher
+   * Tab Navigation Switcher (Persists active tab in storage)
    */
   const setActiveTab = (tab: TabType) => {
     setState((prev) => ({ ...prev, activeTab: tab }));
+    try {
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, tab);
+    } catch (_e) {}
   };
 
   const setOthersSubView = (subView: import('./types').OthersSubView) => {

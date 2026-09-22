@@ -44,12 +44,39 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [othersDropdownOpen, setOthersDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setOthersDropdownOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setOthersDropdownOpen(false);
+    }, 150);
+  };
 
   const logoUrl = companyInfo
     ? buildImageUrl(companyInfo.logoFileLocation, companyInfo.logoFileName)
     : null;
 
   const photoUrl = getStudentPhotoUrl(profile);
+
+  // Clear hover timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -161,7 +188,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             })}
 
             {/* Others Dropdown Button containing RU Directory & Student Hub */}
-            <div className="relative" ref={dropdownRef}>
+            <div
+              className="relative"
+              ref={dropdownRef}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+            >
               <button
                 onClick={() => setOthersDropdownOpen(!othersDropdownOpen)}
                 className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs xl:text-sm font-semibold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
@@ -179,12 +211,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {/* Others Dropdown Popover */}
               {othersDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800 mb-1">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                      University Resources & Tools
-                    </p>
-                  </div>
+                <div className="absolute right-0 top-full pt-1.5 w-72 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-2">
+                    <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-800 mb-1">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                        University Resources & Tools
+                      </p>
+                    </div>
 
                   {/* Option 1: RU Offices & Directory */}
                   <button
@@ -231,7 +264,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   </button>
                 </div>
-              )}
+              </div>
+            )}
             </div>
           </nav>
 

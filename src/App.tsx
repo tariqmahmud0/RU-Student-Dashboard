@@ -314,36 +314,41 @@ export default function App() {
     if (isGuestDirectoryOpen) {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white transition-colors">
-          <header className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center justify-between h-16 sm:h-20">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-700 p-2 flex items-center justify-center shrink-0 shadow-sm border border-emerald-800">
+          <header className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md text-slate-900 dark:text-slate-100 shadow-xs sticky top-0 z-50 border-b border-slate-200/80 dark:border-slate-800 transition-colors">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16 gap-2">
+                <div className="flex items-center space-x-2.5 sm:space-x-3 shrink-0 min-w-0">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-800 p-1.5 flex items-center justify-center shrink-0 shadow-sm border border-emerald-500/30">
                     <Building2 className="w-5 h-5 text-white" />
                   </div>
-                  <div>
-                    <h1 className="font-bold text-base sm:text-lg leading-tight text-emerald-900 dark:text-emerald-400">
-                      {state.companyInfo?.name || "University of Rajshahi"}
+                  <div className="min-w-0">
+                    <h1 className="font-extrabold text-sm sm:text-base leading-tight text-slate-900 dark:text-white truncate max-w-[160px] xs:max-w-[220px] sm:max-w-none">
+                      <span className="hidden sm:inline">{state.companyInfo?.name || "University of Rajshahi"}</span>
+                      <span className="sm:hidden">RU Directory</span>
                     </h1>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                      Public Offices & Personnel Directory • রাজশাহী বিশ্ববিদ্যালয়
+                    <p className="text-[10px] sm:text-xs text-emerald-700 dark:text-emerald-400 font-semibold tracking-wide truncate max-w-[160px] xs:max-w-[220px] sm:max-w-none">
+                      রাজশাহী বিশ্ববিদ্যালয়
+                      <span className="hidden md:inline text-slate-400 dark:text-slate-500 font-normal"> • Public Personnel Directory</span>
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2 sm:space-x-3">
+
+                <div className="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
                   <button
                     onClick={toggleTheme}
-                    className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                    title="Toggle Theme"
+                    className="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer border border-transparent dark:border-slate-800"
+                    title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                    aria-label="Toggle dark mode"
                   >
-                    {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-400" />}
+                    {theme === 'light' ? <Moon className="w-4 h-4 text-slate-700" /> : <Sun className="w-4 h-4 text-amber-400" />}
                   </button>
+
                   <button
                     onClick={() => setIsGuestDirectoryOpen(false)}
-                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm flex items-center space-x-1.5 transition-all cursor-pointer shadow-xs"
+                    className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm flex items-center space-x-1.5 transition-all cursor-pointer shadow-xs shrink-0 whitespace-nowrap"
                   >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Back to Student Login</span>
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    <span><span className="hidden sm:inline">Back to </span>Login</span>
                   </button>
                 </div>
               </div>

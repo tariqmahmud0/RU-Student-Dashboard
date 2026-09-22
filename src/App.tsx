@@ -6,6 +6,7 @@ import {
   FeeItem,
   NoticeItem,
   AppState,
+  TabType,
 } from './types';
 import {
   getCompanyInfo,
@@ -25,6 +26,7 @@ import { ProfileView } from './components/ProfileView';
 import { ResultsView } from './components/ResultsView';
 import { FeesView } from './components/FeesView';
 import { NoticesView } from './components/NoticesView';
+import { OthersView } from './components/OthersView';
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 import { ErrorAlert } from './components/ErrorAlert';
 import { Footer } from './components/Footer';
@@ -46,6 +48,7 @@ export default function App() {
     recentNotices: [],
     hallNotices: [],
     activeTab: 'overview',
+    othersSubView: 'directory',
     isLoading: false,
     error: null,
   });
@@ -168,8 +171,12 @@ export default function App() {
   /**
    * Tab Navigation Switcher
    */
-  const setActiveTab = (tab: 'overview' | 'profile' | 'results' | 'fees' | 'notices') => {
+  const setActiveTab = (tab: TabType) => {
     setState((prev) => ({ ...prev, activeTab: tab }));
+  };
+
+  const setOthersSubView = (subView: import('./types').OthersSubView) => {
+    setState((prev) => ({ ...prev, othersSubView: subView }));
   };
 
   // If not authenticated, render Login Screen
@@ -195,6 +202,8 @@ export default function App() {
         profile={state.profile}
         activeTab={state.activeTab}
         setActiveTab={setActiveTab}
+        othersSubView={state.othersSubView}
+        setOthersSubView={setOthersSubView}
         onLogout={handleLogout}
         theme={theme}
         onToggleTheme={toggleTheme}
@@ -256,6 +265,16 @@ export default function App() {
           <NoticesView
             recentNotices={state.recentNotices}
             hallNotices={state.hallNotices}
+          />
+        )}
+
+        {state.activeTab === 'others' && (
+          <OthersView
+            profile={state.profile}
+            results={state.results}
+            companyInfo={state.companyInfo}
+            othersSubView={state.othersSubView}
+            setOthersSubView={setOthersSubView}
           />
         )}
 

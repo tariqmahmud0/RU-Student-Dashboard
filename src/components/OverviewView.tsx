@@ -1,5 +1,5 @@
 import React from 'react';
-import { StudentInfo, SemesterResult, FeeItem, NoticeItem } from '../types';
+import { StudentInfo, SemesterResult, FeeItem, NoticeItem, TabType } from '../types';
 import { getStudentPhotoUrl } from '../api';
 import { User, Award, BookOpen, Building2, Calendar, Receipt, Bell, ShieldCheck, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 
@@ -8,7 +8,7 @@ interface OverviewViewProps {
   results: SemesterResult[];
   fees: FeeItem[];
   notices: NoticeItem[];
-  setActiveTab: (tab: 'overview' | 'profile' | 'results' | 'fees' | 'notices') => void;
+  setActiveTab: (tab: TabType) => void;
 }
 
 export const OverviewView: React.FC<OverviewViewProps> = ({
@@ -317,6 +317,26 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
       </div>
 
+      {/* Quick Access to Others / Student Tools Banner */}
+      <div className="bg-gradient-to-r from-slate-900 to-emerald-950 text-white rounded-xl p-5 sm:p-6 border border-emerald-900/40 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="space-y-1 text-center sm:text-left">
+          <h4 className="font-bold text-base flex items-center justify-center sm:justify-start space-x-2">
+            <span>🧮 Student Tools & University Resources (Others)</span>
+          </h4>
+          <p className="text-xs text-slate-300 max-w-xl">
+            Calculate your semester SGPA & target CGPA, check the official RU grading table, find emergency campus contacts, and visit official university websites.
+          </p>
+        </div>
+        <button
+          onClick={() => setActiveTab('others')}
+          className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition-colors shrink-0 shadow-sm flex items-center space-x-1.5 cursor-pointer"
+        >
+          <span>Explore Others</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
     </div>
   );
 };
+

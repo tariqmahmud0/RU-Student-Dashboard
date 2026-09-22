@@ -9,6 +9,12 @@
   force = true
 
 [[redirects]]
+  from = "/api/ru-profile/*"
+  to = "https://profile.ru.ac.bd/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

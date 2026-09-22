@@ -1,13 +1,32 @@
-import React, { useState } from 'react';
-import { CompanyInfo, StudentInfo } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { CompanyInfo, StudentInfo, TabType, OthersSubView } from '../types';
 import { buildImageUrl, getStudentPhotoUrl } from '../api';
-import { GraduationCap, User, Award, Receipt, Bell, LogOut, Menu, X, Home, Building2, Sun, Moon } from 'lucide-react';
+import {
+  GraduationCap,
+  User,
+  Award,
+  Receipt,
+  Bell,
+  LogOut,
+  Menu,
+  X,
+  Home,
+  Building2,
+  Sun,
+  Moon,
+  Layers,
+  ChevronDown,
+  Sparkles,
+  BookOpen
+} from 'lucide-react';
 
 interface NavbarProps {
   companyInfo: CompanyInfo | null;
   profile: StudentInfo | null;
-  activeTab: 'overview' | 'profile' | 'results' | 'fees' | 'notices';
-  setActiveTab: (tab: 'overview' | 'profile' | 'results' | 'fees' | 'notices') => void;
+  activeTab: TabType;
+  setActiveTab: (tab: TabType) => void;
+  othersSubView?: OthersSubView;
+  setOthersSubView?: (sub: OthersSubView) => void;
   onLogout: () => void;
   theme?: 'light' | 'dark';
   onToggleTheme?: () => void;
@@ -18,11 +37,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   profile,
   activeTab,
   setActiveTab,
+  othersSubView = 'directory',
+  setOthersSubView,
   onLogout,
   theme = 'light',
   onToggleTheme,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [othersDropdownOpen, setOthersDropdownOpen] = useState(false);
+  const [mobileOthersExpanded, setMobileOthersExpanded] = useState(true);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const logoUrl = companyInfo
     ? buildImageUrl(companyInfo.logoFileLocation, companyInfo.logoFileName)
@@ -30,17 +54,38 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const photoUrl = getStudentPhotoUrl(profile);
 
-  const navItems = [
-    { id: 'overview', label: 'Overview', icon: Home },
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'results', label: 'Results & Marks', icon: Award },
-    { id: 'fees', label: 'Fees History', icon: Receipt },
-    { id: 'notices', label: 'Notices', icon: Bell },
-  ] as const;
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOthersDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const handleTabClick = (tab: 'overview' | 'profile' | 'results' | 'fees' | 'notices') => {
+  const navItems = [
+    { id: 'overview' as const, label: 'Overview', icon: Home },
+    { id: 'profile' as const, label: 'Profile', icon: User },
+    { id: 'results' as const, label: 'Results & Marks', icon: Award },
+    { id: 'fees' as const, label: 'Fees History', icon: Receipt },
+    { id: 'notices' as const, label: 'Notices', icon: Bell },
+  ];
+
+  const handleTabClick = (tab: TabType) => {
     setActiveTab(tab);
     setMobileMenuOpen(false);
+    setOthersDropdownOpen(false);
+  };
+
+  const handleOthersSubClick = (sub: OthersSubView) => {
+    setActiveTab('others');
+    if (setOthersSubView) {
+      setOthersSubView(sub);
+    }
+    setMobileMenuOpen(false);
+    setOthersDropdownOpen(false);
   };
 
   return (
@@ -83,7 +128,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   key={item.id}
                   onClick={() => handleTabClick(item.id)}
-                  className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                     isActive
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 font-semibold shadow-2xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
@@ -94,6 +139,76 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               );
             })}
+
+            {/* Others Dropdown Menu */}
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setOthersDropdownOpen(!othersDropdownOpen)}
+                className={`flex items-center space-x-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                  activeTab === 'others'
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 font-semibold shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <Layers className={`w-4 h-4 ${activeTab === 'others' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`} />
+                <span>Others</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${othersDropdownOpen ? 'rotate-180 text-emerald-600' : 'text-slate-400'}`} />
+              </button>
+
+              {othersDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      University Resources & Tools
+                    </p>
+                  </div>
+
+                  {/* Option 1: RU Offices & Directory */}
+                  <button
+                    onClick={() => handleOthersSubClick('directory')}
+                    className={`w-full text-left p-2.5 rounded-xl transition-all flex items-start space-x-3 cursor-pointer ${
+                      activeTab === 'others' && othersSubView === 'directory'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 font-semibold'
+                        : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 mt-0.5">
+                      <Building2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold leading-snug">
+                        RU Offices & Directory
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        শিক্ষক ও কর্মকর্তা ডিরেক্টরি (profile.ru.ac.bd)
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Option 2: Student Hub & Academic Tools */}
+                  <button
+                    onClick={() => handleOthersSubClick('hub')}
+                    className={`w-full text-left p-2.5 rounded-xl transition-all flex items-start space-x-3 mt-1 cursor-pointer ${
+                      activeTab === 'others' && othersSubView === 'hub'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 font-semibold'
+                        : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0 mt-0.5">
+                      <GraduationCap className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold leading-snug">
+                        Student Hub & Academic Tools
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        CGPA ক্যালকুলেটর, বীমা, পোর্টাল ও হেল্পলাইন
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* User Info, Theme Toggle & Logout Button */}
@@ -101,7 +216,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {onToggleTheme && (
               <button
                 onClick={onToggleTheme}
-                className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent dark:border-slate-800"
+                className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-transparent dark:border-slate-800 cursor-pointer"
                 title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
                 aria-label="Toggle dark mode"
               >
@@ -150,8 +265,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             {onToggleTheme && (
               <button
                 onClick={onToggleTheme}
-                className="p-2 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="sm:hidden p-2 rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                 title="Toggle Theme"
+                aria-label="Toggle dark mode"
               >
                 {theme === 'light' ? <Moon className="w-5 h-5 text-slate-700" /> : <Sun className="w-5 h-5 text-amber-400" />}
               </button>
@@ -202,6 +318,37 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             );
           })}
+
+          {/* Mobile Others Category with direct sub-links */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 mt-2">
+            <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+              Others & Directory
+            </p>
+            
+            <button
+              onClick={() => handleOthersSubClick('directory')}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                activeTab === 'others' && othersSubView === 'directory'
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-bold'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Building2 className="w-4 h-4 text-emerald-600" />
+              <span>🏛️ RU Offices & Directory</span>
+            </button>
+
+            <button
+              onClick={() => handleOthersSubClick('hub')}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                activeTab === 'others' && othersSubView === 'hub'
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 font-bold'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              <GraduationCap className="w-4 h-4 text-blue-600" />
+              <span>🎓 Student Hub & Tools</span>
+            </button>
+          </div>
         </div>
       )}
     </header>

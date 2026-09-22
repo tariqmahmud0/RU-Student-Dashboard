@@ -106,7 +106,7 @@ export interface NoticeItem {
   isHall?: boolean;
 }
 
-export type TabType = 'overview' | 'profile' | 'results' | 'fees' | 'notices' | 'others';
+export type TabType = 'overview' | 'profile' | 'results' | 'fees' | 'notices' | 'directory' | 'others';
 
 export type OthersSubView = 'hub' | 'directory';
 

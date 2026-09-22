@@ -83,6 +83,31 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         </div>
       </div>
 
+      {/* RU Offices & Personnel Directory Quick Action Banner */}
+      <div className="bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-xs border border-emerald-700/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center space-x-3.5 text-center sm:text-left">
+          <div className="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0 border border-emerald-400/30 shadow-inner">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm sm:text-base leading-snug flex items-center gap-2 justify-center sm:justify-start">
+              <span>RU Offices & Personnel Directory</span>
+              <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/30">Live RU API</span>
+            </h3>
+            <p className="text-xs text-emerald-100/80 mt-0.5">
+              বিশ্ববিদ্যালয়ের সকল অনুষদ, বিভাগ, শিক্ষক ও কর্মকর্তাদের ফোন, ইমেইল ও গবেষণা প্রোফাইল অনুসন্ধান
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setActiveTab('directory')}
+          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 transition-all shrink-0 cursor-pointer shadow-sm hover:shadow-md"
+        >
+          <span>Open Directory</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+
       {/* Overview Metric Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         

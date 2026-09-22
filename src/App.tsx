@@ -27,11 +27,14 @@ import { ResultsView } from './components/ResultsView';
 import { FeesView } from './components/FeesView';
 import { NoticesView } from './components/NoticesView';
 import { OthersView } from './components/OthersView';
+import { RuDirectory } from './components/RuDirectory';
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 import { ErrorAlert } from './components/ErrorAlert';
 import { Footer } from './components/Footer';
+import { Building2, ArrowLeft, Sun, Moon } from 'lucide-react';
 
 export default function App() {
+  const [isGuestDirectoryOpen, setIsGuestDirectoryOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('ru_theme');
     if (saved === 'dark' || saved === 'light') return saved;
@@ -179,8 +182,63 @@ export default function App() {
     setState((prev) => ({ ...prev, othersSubView: subView }));
   };
 
-  // If not authenticated, render Login Screen
+  // If not authenticated, render Login Screen or Guest RU Directory
   if (!state.token) {
+    if (isGuestDirectoryOpen) {
+      return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white transition-colors">
+          <header className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs sticky top-0 z-50 border-b border-slate-200 dark:border-slate-800">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16 sm:h-20">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-700 p-2 flex items-center justify-center shrink-0 shadow-sm border border-emerald-800">
+                    <Building2 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="font-bold text-base sm:text-lg leading-tight text-emerald-900 dark:text-emerald-400">
+                      {state.companyInfo?.name || "University of Rajshahi"}
+                    </h1>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      Public Offices & Personnel Directory • রাজশাহী বিশ্ববিদ্যালয়
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <button
+                    onClick={toggleTheme}
+                    className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                    title="Toggle Theme"
+                  >
+                    {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-400" />}
+                  </button>
+                  <button
+                    onClick={() => setIsGuestDirectoryOpen(false)}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs sm:text-sm flex items-center space-x-1.5 transition-all cursor-pointer shadow-xs"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back to Student Login</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 min-w-0">
+            <RuDirectory profile={null} />
+          </main>
+
+          <Footer>
+            <>
+              <p>© {new Date().getFullYear()} {state.companyInfo?.name || "University of Rajshahi"}. Public Directory.</p>
+              <p className="font-mono text-[11px] text-slate-400 dark:text-slate-500">
+                Official RU Profile & Directory Integration
+              </p>
+            </>
+          </Footer>
+        </div>
+      );
+    }
+
     return (
       <LoginView
         companyInfo={state.companyInfo}
@@ -189,6 +247,7 @@ export default function App() {
         error={state.error}
         theme={theme}
         onToggleTheme={toggleTheme}
+        onOpenDirectory={() => setIsGuestDirectoryOpen(true)}
       />
     );
   }
@@ -268,12 +327,12 @@ export default function App() {
           />
         )}
 
-        {state.activeTab === 'others' && (
+        {(state.activeTab === 'others' || state.activeTab === 'directory') && (
           <OthersView
             profile={state.profile}
             results={state.results}
             companyInfo={state.companyInfo}
-            othersSubView={state.othersSubView}
+            othersSubView={state.activeTab === 'directory' ? 'directory' : state.othersSubView}
             setOthersSubView={setOthersSubView}
           />
         )}

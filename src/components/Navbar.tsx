@@ -71,6 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'results' as const, label: 'Results & Marks', icon: Award },
     { id: 'fees' as const, label: 'Fees History', icon: Receipt },
     { id: 'notices' as const, label: 'Notices', icon: Bell },
+    { id: 'directory' as const, label: 'RU Directory', icon: Building2 },
   ];
 
   const handleTabClick = (tab: TabType) => {
@@ -123,11 +124,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           <nav className="hidden lg:flex items-center space-x-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
+              const isActive =
+                item.id === 'directory'
+                  ? activeTab === 'directory' || (activeTab === 'others' && othersSubView === 'directory')
+                  : activeTab === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => handleTabClick(item.id)}
+                  onClick={() => {
+                    if (item.id === 'directory') {
+                      handleOthersSubClick('directory');
+                    } else {
+                      handleTabClick(item.id);
+                    }
+                  }}
                   className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
                     isActive
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 font-semibold shadow-2xs'
@@ -302,11 +312,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeTab === item.id;
+            const isActive =
+              item.id === 'directory'
+                ? activeTab === 'directory' || (activeTab === 'others' && othersSubView === 'directory')
+                : activeTab === item.id;
             return (
               <button
                 key={item.id}
-                onClick={() => handleTabClick(item.id)}
+                onClick={() => {
+                  if (item.id === 'directory') {
+                    handleOthersSubClick('directory');
+                  } else {
+                    handleTabClick(item.id);
+                  }
+                }}
                 className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-base font-medium transition-colors ${
                   isActive
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800 font-semibold'

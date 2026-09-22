@@ -1,4 +1,5 @@
 import { CompanyInfo, LoginResponse, StudentInfo, SemesterResult, FeeItem, NoticeItem } from './types';
+import { RU_OFFICES_FALLBACK } from './data/ruOfficesFallback';
 
 const RU_DIRECT_BASE = "https://eresult.ru.ac.bd:9603/api";
 const PROXY_BASE = "/api/proxy";
@@ -288,9 +289,9 @@ async function ruProfileRequest<T>(endpoint: string): Promise<T | null> {
     "api-key": RU_PROFILE_API_KEY,
   };
 
-  // Attempt 1: Local proxy (bypasses browser CORS automatically)
+  // Attempt 1: Local / Vercel / Netlify proxy (with mandatory api-key header)
   try {
-    const res = await fetch(`${RU_PROFILE_LOCAL_PROXY}${endpoint}`);
+    const res = await fetch(`${RU_PROFILE_LOCAL_PROXY}${endpoint}`, { headers });
     if (res.ok) {
       const data = await res.json();
       return data as T;
@@ -307,6 +308,19 @@ async function ruProfileRequest<T>(endpoint: string): Promise<T | null> {
       return data as T;
     }
   } catch (_e) {
+    // Fall back to public CORS proxy
+  }
+
+  // Attempt 3: Public CORS Proxy fallback (for static deployment environments)
+  try {
+    const targetUrl = `${RU_PROFILE_DIRECT_BASE}${endpoint}`;
+    const corsProxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+    const res = await fetch(corsProxyUrl, { headers });
+    if (res.ok) {
+      const data = await res.json();
+      return data as T;
+    }
+  } catch (_e) {
     // Both failed
   }
 
@@ -315,10 +329,18 @@ async function ruProfileRequest<T>(endpoint: string): Promise<T | null> {
 
 /**
  * Fetch all RU Offices (Departments, Faculties, Institutes, Halls, Administration)
+ * Guaranteed to return full list of 143 offices even if remote server is slow/unreachable.
  */
 export async function getRuOffices(): Promise<import('./types').OfficeItem[]> {
-  const res = await ruProfileRequest<{ offices: import('./types').OfficeItem[] }>("/offices");
-  return res?.offices || [];
+  try {
+    const res = await ruProfileRequest<{ offices: import('./types').OfficeItem[] }>("/offices");
+    if (res?.offices && Array.isArray(res.offices) && res.offices.length > 0) {
+      return res.offices.filter((o) => o && o.office_name && o.office_name.trim() !== '723');
+    }
+  } catch (_err) {
+    // Fall back to bundled data
+  }
+  return RU_OFFICES_FALLBACK;
 }
 
 /**
@@ -582,7 +604,12 @@ export async function getFullRuEmployeeProfile(salaryId: string): Promise<import
  */
 export async function downloadRuEmployeeCv(salaryId: string, employeeName?: string): Promise<boolean> {
   try {
-    const res = await fetch(`/api/ru-profile/employee/${salaryId}/cv`);
+    const res = await fetch(`/api/ru-profile/employee/${salaryId}/cv`, {
+      headers: {
+        'Accept': 'application/pdf, application/octet-stream, */*',
+        'api-key': RU_PROFILE_API_KEY,
+      },
+    });
     if (!res.ok) {
       // Fallback direct
       window.open(`https://profile.ru.ac.bd/api/employee/${salaryId}/cv`, '_blank');

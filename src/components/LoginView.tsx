@@ -11,6 +11,7 @@ interface LoginViewProps {
   error: string | null;
   theme?: 'light' | 'dark';
   onToggleTheme?: () => void;
+  onOpenDirectory?: () => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({
@@ -20,6 +21,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   error,
   theme = 'light',
   onToggleTheme,
+  onOpenDirectory,
 }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -233,8 +235,25 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
           </form>
 
+          {/* Public Access to RU Directory without Login */}
+          {onOpenDirectory && (
+            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={onOpenDirectory}
+                className="w-full py-2.5 px-3 rounded-xl border border-emerald-300 dark:border-emerald-800/80 bg-emerald-50/80 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-semibold text-xs sm:text-sm transition-all flex items-center justify-center space-x-2 cursor-pointer shadow-xs"
+              >
+                <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>🏛️ RU Offices & Personnel Directory (পাবলিক ডিরেক্টরি) →</span>
+              </button>
+              <p className="text-[11px] text-center text-slate-500 dark:text-slate-400 mt-1">
+                লগইন ছাড়াই বিশ্ববিদ্যালয়ের সকল শিক্ষক ও কর্মকর্তা ডিরেক্টরি খুঁজুন
+              </p>
+            </div>
+          )}
+
           {/* Security Banner */}
-          <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-center">
             <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center space-x-1.5">
               <Lock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
               <span>Authenticates directly with RU e-Result API</span>

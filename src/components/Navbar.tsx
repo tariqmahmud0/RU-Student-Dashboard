@@ -44,6 +44,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [othersDropdownOpen, setOthersDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const hamburgerBtnRef = useRef<HTMLButtonElement>(null);
+  const themeBtnRef = useRef<HTMLButtonElement>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseEnter = () => {
@@ -78,16 +81,34 @@ export const Navbar: React.FC<NavbarProps> = ({
     };
   }, []);
 
-  // Close dropdown on outside click
+  // Close dropdown and mobile menu on outside click or tap
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      const target = event.target as Node;
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         setOthersDropdownOpen(false);
+      }
+      if (
+        mobileMenuOpen &&
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(target) &&
+        hamburgerBtnRef.current &&
+        !hamburgerBtnRef.current.contains(target)
+      ) {
+        // If clicking the theme toggle button, do NOT close the mobile menu
+        if (themeBtnRef.current && themeBtnRef.current.contains(target)) {
+          return;
+        }
+        setMobileMenuOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [mobileMenuOpen]);
 
   // Close on ESC key
   useEffect(() => {
@@ -100,6 +121,32 @@ export const Navbar: React.FC<NavbarProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // When mobile menu is open, blur content below, lock scroll, and prevent interaction
+  useEffect(() => {
+    if (mobileMenuOpen && window.innerWidth < 1024) {
+      document.body.classList.add('mobile-menu-active');
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.classList.remove('mobile-menu-active');
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.classList.remove('mobile-menu-active');
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
+  // Automatically close mobile menu if resized to desktop viewport
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth >= 1024 && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [mobileMenuOpen]);
 
   // Main Desktop Nav Items (Excluding Others which has its own dropdown)
   const mainNavItems = [
@@ -310,7 +357,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 />
                 <div className="text-left hidden xl:block leading-none">
                   <p className="text-xs font-bold truncate max-w-[110px]">
-                    {profile.name.split(' ')[0] || profile.name}
+                    {(profile.name?.split(' ')[0]) || profile.name || 'Student'}
                   </p>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
                     {profile.studentId}
@@ -321,7 +368,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Logout Button */}
             <button
-              onClick={onLogout}
+              onClick={() => onLogout()}
               className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900/60 transition-colors cursor-pointer"
               title="Logout from student portal"
             >
@@ -334,6 +381,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center lg:hidden space-x-1 sm:space-x-1.5 shrink-0">
             {onToggleTheme && (
               <button
+                ref={themeBtnRef}
                 onClick={onToggleTheme}
                 className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 title="Toggle Theme"
@@ -367,13 +415,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
 
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              ref={hamburgerBtnRef}
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
               className={`p-2 rounded-xl transition-all cursor-pointer border ml-1 ${
                 mobileMenuOpen
                   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
                   : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700'
               }`}
               aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -382,125 +432,161 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* 5. Mobile & Tablet Drawer Menu (< lg) */}
+      {/* 5. Mobile & Tablet Drawer Menu (< lg) with outside backdrop & absolute overlay */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white/98 dark:bg-slate-900/98 border-t border-slate-200 dark:border-slate-800 px-4 pt-3 pb-5 space-y-3 shadow-xl backdrop-blur-md animate-in slide-in-from-top duration-200">
-          {profile && (
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-50/80 to-teal-50/80 dark:from-emerald-950/40 dark:to-slate-800/80 border border-emerald-200/70 dark:border-emerald-800/40 flex items-center justify-between gap-3">
-              <div className="flex items-center space-x-3 min-w-0">
-                <img
-                  src={photoUrl || '/assets/default-avatar.svg'}
-                  alt={profile.name}
-                  className="w-10 h-10 rounded-full object-contain bg-white dark:bg-slate-900 border-2 border-emerald-500 shrink-0"
-                  onError={(e) => {
-                    const target = e.currentTarget as HTMLImageElement;
-                    target.onerror = null;
-                    target.src = '/assets/default-avatar.svg';
-                  }}
-                />
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                    {profile.name}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                    ID: <span className="font-semibold text-emerald-700 dark:text-emerald-400">{profile.studentId}</span>
-                  </p>
+        <>
+          {/* Backdrop: Clicking outside anywhere dismisses the mobile drawer */}
+          <div
+            className="fixed inset-0 top-16 sm:top-18 bg-slate-900/40 dark:bg-black/70 backdrop-blur-md z-40 lg:hidden transition-opacity animate-in fade-in duration-200 cursor-pointer"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Floating Drawer Menu (Absolute positioned, NO layout shift on page content) */}
+          <div
+            ref={mobileMenuRef}
+            className="absolute top-full left-0 right-0 w-full z-50 lg:hidden bg-white/98 dark:bg-slate-900/98 border-b border-slate-200 dark:border-slate-800 px-4 pt-3 pb-5 space-y-3 shadow-2xl backdrop-blur-md max-h-[calc(100vh-4.5rem)] overflow-y-auto animate-in slide-in-from-top-2 duration-200"
+          >
+            {profile && (
+              <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-50/80 to-teal-50/80 dark:from-emerald-950/40 dark:to-slate-800/80 border border-emerald-200/70 dark:border-emerald-800/40 flex items-center justify-between gap-3">
+                <div className="flex items-center space-x-3 min-w-0">
+                  <img
+                    src={photoUrl || '/assets/default-avatar.svg'}
+                    alt={profile.name}
+                    className="w-10 h-10 rounded-full object-contain bg-white dark:bg-slate-900 border-2 border-emerald-500 shrink-0"
+                    onError={(e) => {
+                      const target = e.currentTarget as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = '/assets/default-avatar.svg';
+                    }}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                      {profile.name}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                      ID: <span className="font-semibold text-emerald-700 dark:text-emerald-400">{profile.studentId}</span>
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <button
-                onClick={() => handleTabClick('profile')}
-                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shrink-0 cursor-pointer shadow-2xs"
-              >
-                Profile
-              </button>
-            </div>
-          )}
-
-          {/* Nav List */}
-          <div className="space-y-1">
-            {mainNavItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-
-              return (
                 <button
-                  key={item.id}
-                  onClick={() => handleTabClick(item.id)}
-                  className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                    isActive
+                  onClick={() => handleTabClick('profile')}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shrink-0 cursor-pointer shadow-2xs"
+                >
+                  Profile
+                </button>
+              </div>
+            )}
+
+            {/* Nav List */}
+            <div className="space-y-1">
+              {mainNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleTabClick(item.id)}
+                    className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Mobile Others Category with direct sub-links */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+              <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                Others & Resources
+              </p>
+              
+              <div className="space-y-1">
+                <button
+                  onClick={() => handleOthersSubClick('directory')}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                    activeTab === 'directory' || (activeTab === 'others' && othersSubView === 'directory')
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
-                  <span>{item.label}</span>
+                  <div className="flex items-center space-x-3">
+                    <Building2 className="w-4 h-4" />
+                    <span>RU Directory</span>
+                  </div>
+                  <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                    activeTab === 'directory' || (activeTab === 'others' && othersSubView === 'directory')
+                      ? 'bg-white/20 text-white'
+                      : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                  }`}>
+                    Live
+                  </span>
                 </button>
-              );
-            })}
-          </div>
 
-          {/* Mobile Others Category with direct sub-links */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-            <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-              Others & Resources
-            </p>
-            
-            <div className="space-y-1">
-              <button
-                onClick={() => handleOthersSubClick('directory')}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                  activeTab === 'directory' || (activeTab === 'others' && othersSubView === 'directory')
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <Building2 className="w-4 h-4" />
-                  <span>RU Directory</span>
-                </div>
-                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                  activeTab === 'directory' || (activeTab === 'others' && othersSubView === 'directory')
-                    ? 'bg-white/20 text-white'
-                    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-                }`}>
-                  Live
-                </span>
-              </button>
+                <button
+                  onClick={() => handleOthersSubClick('hub')}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+                    activeTab === 'others' && othersSubView === 'hub'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <GraduationCap className="w-4 h-4" />
+                    <span>Student Hub</span>
+                  </div>
+                  <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                    activeTab === 'others' && othersSubView === 'hub'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                  }`}>
+                    Tools
+                  </span>
+                </button>
+              </div>
+            </div>
 
+            {/* Drawer Footer Actions */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
+              {onToggleTheme && (
+                <button
+                  type="button"
+                  onClick={onToggleTheme}
+                  className="flex items-center justify-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer shrink-0"
+                  title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                >
+                  {theme === 'light' ? (
+                    <>
+                      <Moon className="w-3.5 h-3.5 text-slate-700" />
+                      <span>Dark</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sun className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Light</span>
+                    </>
+                  )}
+                </button>
+              )}
               <button
-                onClick={() => handleOthersSubClick('hub')}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
-                  activeTab === 'others' && othersSubView === 'hub'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onLogout();
+                }}
+                className="flex-1 flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer"
               >
-                <div className="flex items-center space-x-3">
-                  <GraduationCap className="w-4 h-4" />
-                  <span>Student Hub</span>
-                </div>
-                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                  activeTab === 'others' && othersSubView === 'hub'
-                    ? 'bg-white/20 text-white'
-                    : 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                }`}>
-                  Tools
-                </span>
+                <LogOut className="w-4 h-4" />
+                <span>Logout from Student Portal</span>
               </button>
             </div>
           </div>
-
-          {/* Drawer Footer Actions */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
-            <button
-              onClick={onLogout}
-              className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Logout from Student Portal</span>
-            </button>
-          </div>
-        </div>
+        </>
       )}
     </header>
   );

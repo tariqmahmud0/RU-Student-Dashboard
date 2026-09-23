@@ -192,6 +192,22 @@ export default function App() {
     };
   }, []);
 
+  // Guarantee viewport scroll is reset to top when logging in
+  useEffect(() => {
+    if (state.token) {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
+  }, [state.token]);
+
+  // Guarantee viewport scroll is reset to top when switching dashboard tabs
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [state.activeTab]);
+
   // Silently revalidate latest student data in background on mount if restored from saved session
   useEffect(() => {
     const savedToken = state.token;
@@ -300,6 +316,11 @@ export default function App() {
         activeTab: 'overview',
         error: null,
       }));
+
+      // Immediate scroll to top after authenticating
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
     } catch (err: any) {
       setState((prev) => ({
         ...prev,
@@ -326,8 +347,11 @@ export default function App() {
       recentNotices: [],
       hallNotices: [],
       activeTab: 'overview',
-      error: reason || null,
+      error: typeof reason === 'string' ? reason : null,
     }));
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   };
 
   // Auto-logout when working on another tab (background tab timeout) or idle
@@ -551,7 +575,7 @@ export default function App() {
         setActiveTab={setActiveTab}
         othersSubView={state.othersSubView}
         setOthersSubView={setOthersSubView}
-        onLogout={handleLogout}
+        onLogout={() => handleLogout()}
         theme={theme}
         onToggleTheme={toggleTheme}
       />

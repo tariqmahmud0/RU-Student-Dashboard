@@ -132,11 +132,27 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
           {/* Error Banner */}
           {(error || formError) && (
-            <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-sm flex items-start space-x-3">
-              <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+            <div
+              className={`mb-6 p-4 rounded-xl border text-sm flex items-start space-x-3 ${
+                error && !formError && (error.includes('সেশন') || error.includes('Session'))
+                  ? 'bg-amber-50 dark:bg-amber-950/50 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200'
+                  : 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'
+              }`}
+            >
+              <AlertCircle
+                className={`w-5 h-5 shrink-0 mt-0.5 ${
+                  error && !formError && (error.includes('সেশন') || error.includes('Session'))
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-rose-600 dark:text-rose-400'
+                }`}
+              />
               <div>
-                <p className="font-semibold text-rose-900 dark:text-rose-200">Authentication Error</p>
-                <p className="text-xs mt-0.5 text-rose-700 dark:text-rose-300">{formError || error}</p>
+                <p className="font-semibold">
+                  {error && !formError && (error.includes('সেশন') || error.includes('Session'))
+                    ? 'সেশন সমাপ্তি (Session Expired)'
+                    : 'Authentication Error'}
+                </p>
+                <p className="text-xs mt-0.5 opacity-90">{formError || error}</p>
               </div>
             </div>
           )}

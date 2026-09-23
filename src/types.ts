@@ -116,6 +116,7 @@ export interface OfficeItem {
   office_name: string;
   office_address: string | null;
   office_type: 'department' | 'faculty' | 'institute' | 'hall' | 'administration' | string | null;
+  extra_duty_count?: number;
 }
 
 export interface EmployeeItem {

@@ -44,6 +44,12 @@ const STORAGE_KEYS = {
   ACTIVE_TAB: 'ru_active_tab',
 };
 
+// Security Timeout Configurations
+const BACKGROUND_TAB_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes when working on another tab
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes total inactivity
+const SESSION_ACTIVITY_KEY = 'ru_last_active_time';
+const TAB_HIDDEN_KEY = 'ru_tab_hidden_time';
+
 function getInitialState(): AppState {
   const defaultState: AppState = {
     token: null,
@@ -61,17 +67,41 @@ function getInitialState(): AppState {
   };
 
   try {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-    const studentInfoIdStr = localStorage.getItem(STORAGE_KEYS.STUDENT_INFO_ID);
+    // Purge legacy persistent auth keys from localStorage if any exist
+    Object.values(STORAGE_KEYS).forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch (_e) {}
+    });
+
+    // Session data is maintained strictly per-tab in sessionStorage
+    const token = sessionStorage.getItem(STORAGE_KEYS.TOKEN);
+    const studentInfoIdStr = sessionStorage.getItem(STORAGE_KEYS.STUDENT_INFO_ID);
 
     if (token && studentInfoIdStr) {
+      // Check if session has exceeded idle timeout (e.g., reopened tab after hours)
+      const lastActiveStr = sessionStorage.getItem(SESSION_ACTIVITY_KEY);
+      if (lastActiveStr) {
+        const lastActive = parseInt(lastActiveStr, 10);
+        if (Date.now() - lastActive > IDLE_TIMEOUT_MS) {
+          clearSession();
+          return {
+            ...defaultState,
+            error: 'নিরাপত্তার স্বার্থে দীর্ঘক্ষণ নিষ্ক্রিয় থাকার কারণে সেশনের মেয়াদ শেষ হয়েছে। পুনরায় লগইন করুন।',
+          };
+        }
+      }
+
       const studentInfoId = parseInt(studentInfoIdStr, 10);
-      const profile = JSON.parse(localStorage.getItem(STORAGE_KEYS.PROFILE) || 'null');
-      const results = JSON.parse(localStorage.getItem(STORAGE_KEYS.RESULTS) || '[]');
-      const fees = JSON.parse(localStorage.getItem(STORAGE_KEYS.FEES) || '[]');
-      const recentNotices = JSON.parse(localStorage.getItem(STORAGE_KEYS.RECENT_NOTICES) || '[]');
-      const hallNotices = JSON.parse(localStorage.getItem(STORAGE_KEYS.HALL_NOTICES) || '[]');
-      const activeTab = (localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB) as TabType) || 'overview';
+      const profile = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.PROFILE) || 'null');
+      const results = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.RESULTS) || '[]');
+      const fees = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.FEES) || '[]');
+      const recentNotices = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.RECENT_NOTICES) || '[]');
+      const hallNotices = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.HALL_NOTICES) || '[]');
+      const activeTab = (sessionStorage.getItem(STORAGE_KEYS.ACTIVE_TAB) as TabType) || 'overview';
+
+      // Update activity timestamp
+      sessionStorage.setItem(SESSION_ACTIVITY_KEY, String(Date.now()));
 
       return {
         ...defaultState,
@@ -102,18 +132,23 @@ function saveSession(data: {
   hallNotices?: any[];
 }) {
   try {
-    localStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
-    localStorage.setItem(STORAGE_KEYS.STUDENT_INFO_ID, String(data.studentInfoId));
-    if (data.profile) localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(data.profile));
-    if (data.results) localStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(data.results));
-    if (data.fees) localStorage.setItem(STORAGE_KEYS.FEES, JSON.stringify(data.fees));
-    if (data.recentNotices) localStorage.setItem(STORAGE_KEYS.RECENT_NOTICES, JSON.stringify(data.recentNotices));
-    if (data.hallNotices) localStorage.setItem(STORAGE_KEYS.HALL_NOTICES, JSON.stringify(data.hallNotices));
+    sessionStorage.setItem(STORAGE_KEYS.TOKEN, data.token);
+    sessionStorage.setItem(STORAGE_KEYS.STUDENT_INFO_ID, String(data.studentInfoId));
+    if (data.profile) sessionStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(data.profile));
+    if (data.results) sessionStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(data.results));
+    if (data.fees) sessionStorage.setItem(STORAGE_KEYS.FEES, JSON.stringify(data.fees));
+    if (data.recentNotices) sessionStorage.setItem(STORAGE_KEYS.RECENT_NOTICES, JSON.stringify(data.recentNotices));
+    if (data.hallNotices) sessionStorage.setItem(STORAGE_KEYS.HALL_NOTICES, JSON.stringify(data.hallNotices));
+    sessionStorage.setItem(SESSION_ACTIVITY_KEY, String(Date.now()));
   } catch (_e) {}
 }
 
 function clearSession() {
   try {
+    Object.values(STORAGE_KEYS).forEach((k) => sessionStorage.removeItem(k));
+    sessionStorage.removeItem(SESSION_ACTIVITY_KEY);
+    sessionStorage.removeItem(TAB_HIDDEN_KEY);
+    // Also clear from localStorage just in case
     Object.values(STORAGE_KEYS).forEach((k) => localStorage.removeItem(k));
   } catch (_e) {}
 }
@@ -279,7 +314,7 @@ export default function App() {
    * Secure Logout:
    * Clears token and student datasets from storage and memory.
    */
-  const handleLogout = () => {
+  const handleLogout = (reason?: string) => {
     clearSession();
     setState((prev) => ({
       ...prev,
@@ -291,9 +326,130 @@ export default function App() {
       recentNotices: [],
       hallNotices: [],
       activeTab: 'overview',
-      error: null,
+      error: reason || null,
     }));
   };
+
+  // Auto-logout when working on another tab (background tab timeout) or idle
+  useEffect(() => {
+    if (!state.token) return;
+
+    let backgroundTimer: ReturnType<typeof setTimeout> | null = null;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+    const recordActivity = () => {
+      try {
+        sessionStorage.setItem(SESSION_ACTIVITY_KEY, String(Date.now()));
+      } catch (_e) {}
+    };
+
+    recordActivity();
+
+    const triggerAutoLogout = (reason: string) => {
+      handleLogout(reason);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab is hidden (user switched to another tab or minimized window)
+        const now = Date.now();
+        try {
+          sessionStorage.setItem(TAB_HIDDEN_KEY, String(now));
+        } catch (_e) {}
+
+        if (backgroundTimer) clearTimeout(backgroundTimer);
+        backgroundTimer = setTimeout(() => {
+          triggerAutoLogout(
+            'অন্য ট্যাবে ৫ মিনিটের বেশি সময় থাকায় নিরাপত্তার স্বার্থে আপনার সেশন স্বয়ংক্রিয়ভাবে লগআউট হয়েছে।'
+          );
+        }, BACKGROUND_TAB_TIMEOUT_MS);
+      } else {
+        // Tab became visible again
+        if (backgroundTimer) {
+          clearTimeout(backgroundTimer);
+          backgroundTimer = null;
+        }
+
+        const hiddenAtStr = sessionStorage.getItem(TAB_HIDDEN_KEY);
+        sessionStorage.removeItem(TAB_HIDDEN_KEY);
+
+        if (hiddenAtStr) {
+          const hiddenAt = parseInt(hiddenAtStr, 10);
+          if (Date.now() - hiddenAt >= BACKGROUND_TAB_TIMEOUT_MS) {
+            triggerAutoLogout(
+              'অন্য ট্যাবে ৫ মিনিটের বেশি কাজ করার কারণে নিরাপত্তার স্বার্থে সেশন সমাপ্ত হয়েছে। পুনরায় লগইন করুন।'
+            );
+            return;
+          }
+        }
+
+        // Check general idle inactivity
+        const lastActiveStr = sessionStorage.getItem(SESSION_ACTIVITY_KEY);
+        if (lastActiveStr) {
+          const lastActive = parseInt(lastActiveStr, 10);
+          if (Date.now() - lastActive >= IDLE_TIMEOUT_MS) {
+            triggerAutoLogout(
+              'দীর্ঘক্ষণ কোনো কাজ না থাকায় নিরাপত্তার স্বার্থে সেশন সমাপ্ত হয়েছে। পুনরায় লগইন করুন।'
+            );
+            return;
+          }
+        }
+
+        recordActivity();
+      }
+    };
+
+    // User activity listeners (throttled to avoid performance overhead)
+    let lastThrottled = 0;
+    const onUserInteraction = () => {
+      const now = Date.now();
+      if (now - lastThrottled > 2000) {
+        lastThrottled = now;
+        recordActivity();
+      }
+    };
+
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach((evt) => {
+      window.addEventListener(evt, onUserInteraction, { passive: true });
+    });
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Backup polling check every 10s (in case browser suspended timers while in background)
+    pollInterval = setInterval(() => {
+      if (document.hidden) {
+        const hiddenAtStr = sessionStorage.getItem(TAB_HIDDEN_KEY);
+        if (hiddenAtStr) {
+          const hiddenAt = parseInt(hiddenAtStr, 10);
+          if (Date.now() - hiddenAt >= BACKGROUND_TAB_TIMEOUT_MS) {
+            triggerAutoLogout(
+              'অন্য ট্যাবে ৫ মিনিটের বেশি সময় থাকায় নিরাপত্তার স্বার্থে আপনার সেশন স্বয়ংক্রিয়ভাবে লগআউট হয়েছে।'
+            );
+          }
+        }
+      } else {
+        const lastActiveStr = sessionStorage.getItem(SESSION_ACTIVITY_KEY);
+        if (lastActiveStr) {
+          const lastActive = parseInt(lastActiveStr, 10);
+          if (Date.now() - lastActive >= IDLE_TIMEOUT_MS) {
+            triggerAutoLogout(
+              'দীর্ঘক্ষণ কোনো কাজ না থাকায় নিরাপত্তার স্বার্থে সেশন সমাপ্ত হয়েছে। পুনরায় লগইন করুন।'
+            );
+          }
+        }
+      }
+    }, 10000);
+
+    return () => {
+      if (backgroundTimer) clearTimeout(backgroundTimer);
+      if (pollInterval) clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      activityEvents.forEach((evt) => {
+        window.removeEventListener(evt, onUserInteraction);
+      });
+    };
+  }, [state.token]);
 
   /**
    * Tab Navigation Switcher (Persists active tab in storage)
@@ -301,7 +457,7 @@ export default function App() {
   const setActiveTab = (tab: TabType) => {
     setState((prev) => ({ ...prev, activeTab: tab }));
     try {
-      localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, tab);
+      sessionStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, tab);
     } catch (_e) {}
   };
 

@@ -554,32 +554,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Drawer Footer Actions */}
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center gap-2">
-              {onToggleTheme && (
-                <button
-                  type="button"
-                  onClick={onToggleTheme}
-                  className="flex items-center justify-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700 transition-colors cursor-pointer shrink-0"
-                  title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-                >
-                  {theme === 'light' ? (
-                    <>
-                      <Moon className="w-3.5 h-3.5 text-slate-700" />
-                      <span>Dark</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sun className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Light</span>
-                    </>
-                  )}
-                </button>
-              )}
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
                   onLogout();
                 }}
-                className="flex-1 flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-200 dark:border-rose-900/50 transition-colors cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Logout from Student Portal</span>

@@ -421,28 +421,42 @@ export async function deleteTeacherRating(params: {
   // 1. Supabase Cloud Sync
   if (isSupabaseConfigured) {
     try {
-      const row = {
-        teacher_key: teacherKey,
-        teacher_name: existing.teacherName || teacherName,
-        salary_id: salaryId || null,
-        department: existing.department || null,
-        average_rating: existing.averageRating,
-        total_reviews: existing.totalReviews,
-        criteria_averages: existing.criteriaAverages || null,
-        reviews: existing.reviews,
-        updated_at: new Date().toISOString(),
-      };
+      if (existing.totalReviews === 0) {
+        // When no reviews remain for this teacher, delete the entire row from Supabase to free 100% database space
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/teacher_ratings?teacher_key=eq.${encodeURIComponent(teacherKey)}`,
+          {
+            method: 'DELETE',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+          }
+        );
+      } else {
+        const row = {
+          teacher_key: teacherKey,
+          teacher_name: existing.teacherName || teacherName,
+          salary_id: salaryId || null,
+          department: existing.department || null,
+          average_rating: existing.averageRating,
+          total_reviews: existing.totalReviews,
+          criteria_averages: existing.criteriaAverages || null,
+          reviews: existing.reviews,
+          updated_at: new Date().toISOString(),
+        };
 
-      await fetch(`${SUPABASE_URL}/rest/v1/teacher_ratings`, {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates',
-        },
-        body: JSON.stringify(row),
-      });
+        await fetch(`${SUPABASE_URL}/rest/v1/teacher_ratings`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates',
+          },
+          body: JSON.stringify(row),
+        });
+      }
     } catch (_e) {}
   }
 
@@ -462,9 +476,16 @@ export async function deleteTeacherRating(params: {
   } catch (_e) {}
 
   // 3. Local Cache & Storage
-  ratings[teacherKey] = existing;
-  if (salaryId && salaryId.trim()) {
-    ratings[salaryId.trim()] = existing;
+  if (existing.totalReviews === 0) {
+    delete ratings[teacherKey];
+    if (salaryId && salaryId.trim()) {
+      delete ratings[salaryId.trim()];
+    }
+  } else {
+    ratings[teacherKey] = existing;
+    if (salaryId && salaryId.trim()) {
+      ratings[salaryId.trim()] = existing;
+    }
   }
   cachedRatings = { ...ratings };
   try {
@@ -472,7 +493,7 @@ export async function deleteTeacherRating(params: {
   } catch (_e) {}
 
   dispatchRatingsUpdate();
-  return { success: true, data: existing, message: 'আপনার মূল্যায়ন মুছে ফেলা হয়েছে।' };
+  return { success: true, data: existing.totalReviews > 0 ? existing : null, message: 'আপনার মূল্যায়ন মুছে ফেলা হয়েছে।' };
 }
 
 function dispatchRatingsUpdate() {
@@ -492,8 +513,117 @@ export function onRatingsUpdate(listener: () => void): () => void {
   };
 }
 
-// Automatically fetch ratings on startup in browser environment
+// -------------------------------------------------------------
+// Realtime Sync Engine (WebSockets + Tab Focus / Visibility Sync)
+// -------------------------------------------------------------
+let realtimeSocket: WebSocket | null = null;
+let realtimeHeartbeatTimer: any = null;
+
+export function initRealtimeSync(): () => void {
+  if (typeof window === 'undefined') return () => {};
+
+  // 1. Instant Tab Focus & Visibility Sync
+  // When a student focuses on the browser or switches to this tab, fetch latest in 0.1s
+  const handleVisibilityOrFocus = () => {
+    if (!document.hidden) {
+      fetchAllRatings();
+    }
+  };
+  window.addEventListener('focus', handleVisibilityOrFocus);
+  document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+  // 2. Background Heartbeat Sync (every 20s if tab is open & visible)
+  const pollInterval = setInterval(() => {
+    if (!document.hidden) {
+      fetchAllRatings();
+    }
+  }, 20000);
+
+  // 3. Native Supabase Realtime WebSocket Connection (Instant Push)
+  if (isSupabaseConfigured) {
+    try {
+      const urlObj = new URL(SUPABASE_URL);
+      const wsUrl = `wss://${urlObj.host}/realtime/v1/websocket?apikey=${SUPABASE_ANON_KEY}&vsn=1.0.0`;
+
+      const connectWs = () => {
+        try {
+          realtimeSocket = new WebSocket(wsUrl);
+
+          realtimeSocket.onopen = () => {
+            // Join Phoenix Realtime channel for teacher_ratings
+            realtimeSocket?.send(
+              JSON.stringify({
+                topic: 'realtime:public:teacher_ratings',
+                event: 'phx_join',
+                payload: {},
+                ref: '1',
+              })
+            );
+
+            // Heartbeat ping every 25 seconds
+            if (realtimeHeartbeatTimer) clearInterval(realtimeHeartbeatTimer);
+            realtimeHeartbeatTimer = setInterval(() => {
+              if (realtimeSocket?.readyState === WebSocket.OPEN) {
+                realtimeSocket.send(
+                  JSON.stringify({
+                    topic: 'phoenix',
+                    event: 'heartbeat',
+                    payload: {},
+                    ref: String(Date.now()),
+                  })
+                );
+              }
+            }, 25000);
+          };
+
+          realtimeSocket.onmessage = (event) => {
+            try {
+              const msg = JSON.parse(event.data);
+              if (
+                msg.event === 'postgres_changes' ||
+                msg.event === 'broadcast' ||
+                msg.event === 'INSERT' ||
+                msg.event === 'UPDATE' ||
+                msg.event === 'DELETE'
+              ) {
+                fetchAllRatings();
+              }
+            } catch (_e) {}
+          };
+
+          realtimeSocket.onerror = () => {
+            // Falls back seamlessly to 20s heartbeat & focus sync
+          };
+
+          realtimeSocket.onclose = () => {
+            if (realtimeHeartbeatTimer) clearInterval(realtimeHeartbeatTimer);
+            setTimeout(() => {
+              if (!document.hidden) connectWs();
+            }, 10000);
+          };
+        } catch (_err) {}
+      };
+
+      connectWs();
+    } catch (_e) {}
+  }
+
+  return () => {
+    window.removeEventListener('focus', handleVisibilityOrFocus);
+    document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+    clearInterval(pollInterval);
+    if (realtimeHeartbeatTimer) clearInterval(realtimeHeartbeatTimer);
+    if (realtimeSocket) {
+      try {
+        realtimeSocket.close();
+      } catch (_e) {}
+    }
+  };
+}
+
+// Automatically fetch ratings on startup and start Realtime sync
 if (typeof window !== 'undefined') {
   fetchAllRatings();
+  initRealtimeSync();
 }
 

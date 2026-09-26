@@ -36,6 +36,9 @@ FOR ALL
 USING (true) 
 WITH CHECK (true);
 
+-- 6. (Optional) Enable Supabase Realtime for instant sub-second live updates without page reload
+ALTER PUBLICATION supabase_realtime ADD TABLE public.teacher_ratings;
+
 -- =========================================================================
 -- Setup Complete!
 -- Now in Supabase:

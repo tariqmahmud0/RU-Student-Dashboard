@@ -366,9 +366,16 @@ async function startServer() {
         existing.criteriaAverages = undefined;
       }
 
-      allRatings[teacherKey] = existing;
-      if (salaryId && salaryId.trim()) {
-        allRatings[salaryId.trim()] = existing;
+      if (existing.totalReviews === 0) {
+        delete allRatings[teacherKey];
+        if (salaryId && salaryId.trim()) {
+          delete allRatings[salaryId.trim()];
+        }
+      } else {
+        allRatings[teacherKey] = existing;
+        if (salaryId && salaryId.trim()) {
+          allRatings[salaryId.trim()] = existing;
+        }
       }
 
       writeRatings(allRatings);

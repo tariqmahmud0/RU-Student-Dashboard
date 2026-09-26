@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 
 const RU_API_BASE = "https://eresult.ru.ac.bd:9603/api";
@@ -207,6 +208,178 @@ async function startServer() {
         message: "Failed to communicate with RU Profile API",
         error: error.message,
       });
+    }
+  });
+
+  // -------------------------------------------------------------
+  // Teacher Ratings & Student Feedback System
+  // -------------------------------------------------------------
+  const ratingsFilePath = path.join(process.cwd(), "data", "ratings.json");
+
+  const readRatings = () => {
+    try {
+      if (fs.existsSync(ratingsFilePath)) {
+        return JSON.parse(fs.readFileSync(ratingsFilePath, "utf-8"));
+      }
+    } catch (_e) {}
+    return {};
+  };
+
+  const writeRatings = (data: any) => {
+    try {
+      const dataDir = path.dirname(ratingsFilePath);
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      fs.writeFileSync(ratingsFilePath, JSON.stringify(data, null, 2), "utf-8");
+    } catch (_e) {}
+  };
+
+  // GET all teacher ratings
+  app.get("/api/ratings", (req, res) => {
+    const ratings = readRatings();
+    res.json({ status: true, data: ratings });
+  });
+
+  // POST new rating or update student's rating for a teacher
+  app.post("/api/ratings", (req, res) => {
+    try {
+      const {
+        teacherKey,
+        teacherName,
+        salaryId,
+        studentId,
+        studentName,
+        rating,
+        criteria,
+        comment,
+        courseCode,
+        isAnonymous,
+      } = req.body;
+
+      if (!teacherKey || !studentId || typeof rating !== "number" || rating < 1 || rating > 5) {
+        return res.status(400).json({
+          status: false,
+          message: "Valid teacherKey, studentId, and rating (1-5) are required.",
+        });
+      }
+
+      const allRatings = readRatings();
+      const existing = allRatings[teacherKey] || {
+        teacherKey,
+        teacherName: teacherName || "",
+        salaryId: salaryId || "",
+        averageRating: 0,
+        totalReviews: 0,
+        reviews: [],
+      };
+
+      // Check if student already submitted a review for this teacher
+      const existingReviewIndex = existing.reviews.findIndex((r: any) => r.studentId === studentId);
+      const newReview = {
+        studentId,
+        studentName: isAnonymous ? "Anonymous Student" : (studentName || "Anonymous Student"),
+        rating: Math.round(rating * 10) / 10,
+        criteria: criteria || undefined,
+        comment: (comment || "").trim(),
+        courseCode: (courseCode || "").trim(),
+        isAnonymous: !!isAnonymous,
+        date: new Date().toISOString(),
+      };
+
+      if (existingReviewIndex >= 0) {
+        existing.reviews[existingReviewIndex] = newReview;
+      } else {
+        existing.reviews.push(newReview);
+      }
+
+      // Recalculate average
+      const sum = existing.reviews.reduce((acc: number, r: any) => acc + r.rating, 0);
+      existing.totalReviews = existing.reviews.length;
+      existing.averageRating = Math.round((sum / existing.totalReviews) * 10) / 10;
+
+      // Recalculate criteria averages
+      const criteriaKeys = ["teachingQuality", "punctuality", "helpfulness", "fairness"];
+      const criteriaAverages: Record<string, number> = {};
+      criteriaKeys.forEach((key) => {
+        const validCriteria = existing.reviews.filter((r: any) => r.criteria && typeof r.criteria[key] === "number");
+        if (validCriteria.length > 0) {
+          const cSum = validCriteria.reduce((acc: number, r: any) => acc + r.criteria[key], 0);
+          criteriaAverages[key] = Math.round((cSum / validCriteria.length) * 10) / 10;
+        }
+      });
+      existing.criteriaAverages = Object.keys(criteriaAverages).length > 0 ? criteriaAverages : undefined;
+
+      allRatings[teacherKey] = existing;
+
+      // If salaryId is provided, also alias by salaryId
+      if (salaryId && salaryId.trim()) {
+        allRatings[salaryId.trim()] = existing;
+      }
+
+      writeRatings(allRatings);
+
+      res.json({
+        status: true,
+        message: "Rating submitted successfully.",
+        data: existing,
+        myReview: newReview,
+      });
+    } catch (err: any) {
+      res.status(500).json({ status: false, message: "Failed to save rating", error: err.message });
+    }
+  });
+
+  // DELETE student's rating for a teacher
+  app.delete("/api/ratings", (req, res) => {
+    try {
+      const { teacherKey, studentId, salaryId } = req.body;
+      if (!teacherKey || !studentId) {
+        return res.status(400).json({ status: false, message: "teacherKey and studentId are required" });
+      }
+
+      const allRatings = readRatings();
+      const existing = allRatings[teacherKey];
+      if (!existing || !Array.isArray(existing.reviews)) {
+        return res.json({ status: true, message: "No reviews to delete", data: null });
+      }
+
+      existing.reviews = existing.reviews.filter((r: any) => r.studentId !== studentId);
+      existing.totalReviews = existing.reviews.length;
+
+      if (existing.totalReviews > 0) {
+        const sum = existing.reviews.reduce((acc: number, r: any) => acc + r.rating, 0);
+        existing.averageRating = Math.round((sum / existing.totalReviews) * 10) / 10;
+
+        const criteriaKeys = ["teachingQuality", "punctuality", "helpfulness", "fairness"];
+        const criteriaAverages: Record<string, number> = {};
+        criteriaKeys.forEach((key) => {
+          const validCriteria = existing.reviews.filter((r: any) => r.criteria && typeof r.criteria[key] === "number");
+          if (validCriteria.length > 0) {
+            const cSum = validCriteria.reduce((acc: number, r: any) => acc + r.criteria[key], 0);
+            criteriaAverages[key] = Math.round((cSum / validCriteria.length) * 10) / 10;
+          }
+        });
+        existing.criteriaAverages = Object.keys(criteriaAverages).length > 0 ? criteriaAverages : undefined;
+      } else {
+        existing.averageRating = 0;
+        existing.criteriaAverages = undefined;
+      }
+
+      allRatings[teacherKey] = existing;
+      if (salaryId && salaryId.trim()) {
+        allRatings[salaryId.trim()] = existing;
+      }
+
+      writeRatings(allRatings);
+
+      res.json({
+        status: true,
+        message: "Rating deleted successfully.",
+        data: existing,
+      });
+    } catch (err: any) {
+      res.status(500).json({ status: false, message: "Failed to delete rating", error: err.message });
     }
   });
 

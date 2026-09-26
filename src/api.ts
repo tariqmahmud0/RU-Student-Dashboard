@@ -1,4 +1,4 @@
-import { CompanyInfo, LoginResponse, StudentInfo, SemesterResult, FeeItem, NoticeItem } from './types';
+import { CompanyInfo, LoginResponse, StudentInfo, SemesterResult, FeeItem, NoticeItem, CourseAttendanceSemester } from './types';
 import { RU_OFFICES_FALLBACK } from './data/ruOfficesFallback';
 
 const RU_DIRECT_BASE = "https://eresult.ru.ac.bd:9603/api";
@@ -121,6 +121,22 @@ export async function discoverStudentInfoId(token: string): Promise<number | nul
   }
 
   return null;
+}
+
+/**
+ * Get Student Course Attendance & Registered Courses History
+ * Official RU Exam Portal (exam-portal.ru.ac.bd) backend endpoint.
+ */
+export async function getCourseAttendance(token: string): Promise<CourseAttendanceSemester[]> {
+  const res = await apiRequest<CourseAttendanceSemester[]>(
+    "/private/student/course-attendance/course-attendance-details-by-app-user-id",
+    { token }
+  );
+
+  if (res.status && Array.isArray(res.data)) {
+    return res.data;
+  }
+  return [];
 }
 
 /**

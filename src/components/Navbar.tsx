@@ -16,6 +16,7 @@ import {
   Moon,
   Layers,
   ChevronDown,
+  BookOpen,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -151,6 +152,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Main Desktop Nav Items (Excluding Others which has its own dropdown)
   const mainNavItems = [
     { id: 'overview' as const, label: 'Overview', icon: Home },
+    { id: 'courses' as const, label: 'Course History', icon: BookOpen },
     { id: 'results' as const, label: 'Results & Marks', icon: Award },
     { id: 'fees' as const, label: 'Fees History', icon: Receipt },
     { id: 'notices' as const, label: 'Notices', icon: Bell },

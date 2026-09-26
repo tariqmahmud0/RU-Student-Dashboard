@@ -106,7 +106,75 @@ export interface NoticeItem {
   isHall?: boolean;
 }
 
-export type TabType = 'overview' | 'profile' | 'results' | 'fees' | 'notices' | 'directory' | 'others';
+export interface CourseAttendanceItem {
+  id?: number;
+  courseId?: number;
+  courseCode: string;
+  courseTitle?: string;
+  courseName?: string;
+  courseType?: string;
+  courseTeacher?: string;
+  teacherName?: string;
+  courseCredit?: number;
+  totalClass?: number;
+  totalPresent?: number;
+  absent?: number;
+  percentage?: number;
+  active?: boolean;
+}
+
+export interface CourseAttendanceMaster {
+  id?: number;
+  studentInfoId?: number;
+  yearAndSemesterName?: string;
+  sessionName?: string;
+  departmentName?: string;
+  programName?: string;
+  semesterId?: number;
+  sessionId?: number;
+  [key: string]: any;
+}
+
+export interface CourseAttendanceSemester {
+  master: CourseAttendanceMaster;
+  detailsList: CourseAttendanceItem[];
+}
+
+export interface RatingCriteria {
+  teachingQuality: number; // 1-5
+  punctuality: number;     // 1-5
+  helpfulness: number;     // 1-5
+  fairness: number;        // 1-5
+}
+
+export interface StudentReview {
+  studentId: string;
+  studentName?: string;
+  rating: number; // 1-5
+  criteria?: RatingCriteria;
+  comment?: string;
+  courseCode?: string;
+  date: string;
+  isAnonymous?: boolean;
+}
+
+export interface TeacherRatingSummary {
+  teacherKey: string;
+  teacherName: string;
+  salaryId?: string;
+  department?: string;
+  averageRating: number;
+  totalReviews: number;
+  criteriaAverages?: {
+    teachingQuality?: number;
+    punctuality?: number;
+    helpfulness?: number;
+    fairness?: number;
+  };
+  reviews: StudentReview[];
+}
+
+export type TabType = 'overview' | 'profile' | 'results' | 'fees' | 'courses' | 'notices' | 'directory' | 'others';
 
 export type OthersSubView = 'hub' | 'directory';
 
@@ -310,6 +378,7 @@ export interface AppState {
   profile: StudentInfo | null;
   results: SemesterResult[];
   fees: FeeItem[];
+  courseAttendance: CourseAttendanceSemester[];
   recentNotices: NoticeItem[];
   hallNotices: NoticeItem[];
   activeTab: TabType;

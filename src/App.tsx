@@ -5,6 +5,7 @@ import {
   SemesterResult,
   FeeItem,
   NoticeItem,
+  CourseAttendanceSemester,
   AppState,
   TabType,
 } from './types';
@@ -15,6 +16,7 @@ import {
   getStudentProfile,
   getCourseMarks,
   getFeeRecords,
+  getCourseAttendance,
   getRecentNotices,
   getHallNotices,
 } from './api';
@@ -23,6 +25,7 @@ import { Navbar } from './components/Navbar';
 import { LoginView } from './components/LoginView';
 import { OverviewView } from './components/OverviewView';
 import { ProfileView } from './components/ProfileView';
+import { CourseHistoryView } from './components/CourseHistoryView';
 import { ResultsView } from './components/ResultsView';
 import { FeesView } from './components/FeesView';
 import { NoticesView } from './components/NoticesView';
@@ -39,6 +42,7 @@ const STORAGE_KEYS = {
   PROFILE: 'ru_student_profile',
   RESULTS: 'ru_results',
   FEES: 'ru_fees',
+  COURSE_ATTENDANCE: 'ru_course_attendance',
   RECENT_NOTICES: 'ru_recent_notices',
   HALL_NOTICES: 'ru_hall_notices',
   ACTIVE_TAB: 'ru_active_tab',
@@ -58,6 +62,7 @@ function getInitialState(): AppState {
     profile: null,
     results: [],
     fees: [],
+    courseAttendance: [],
     recentNotices: [],
     hallNotices: [],
     activeTab: 'overview',
@@ -96,6 +101,7 @@ function getInitialState(): AppState {
       const profile = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.PROFILE) || 'null');
       const results = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.RESULTS) || '[]');
       const fees = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.FEES) || '[]');
+      const courseAttendance = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.COURSE_ATTENDANCE) || '[]');
       const recentNotices = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.RECENT_NOTICES) || '[]');
       const hallNotices = JSON.parse(sessionStorage.getItem(STORAGE_KEYS.HALL_NOTICES) || '[]');
       const activeTab = (sessionStorage.getItem(STORAGE_KEYS.ACTIVE_TAB) as TabType) || 'overview';
@@ -110,6 +116,7 @@ function getInitialState(): AppState {
         profile,
         results,
         fees,
+        courseAttendance,
         recentNotices,
         hallNotices,
         activeTab: activeTab || 'overview',
@@ -128,6 +135,7 @@ function saveSession(data: {
   profile?: any;
   results?: any[];
   fees?: any[];
+  courseAttendance?: any[];
   recentNotices?: any[];
   hallNotices?: any[];
 }) {
@@ -137,6 +145,7 @@ function saveSession(data: {
     if (data.profile) sessionStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(data.profile));
     if (data.results) sessionStorage.setItem(STORAGE_KEYS.RESULTS, JSON.stringify(data.results));
     if (data.fees) sessionStorage.setItem(STORAGE_KEYS.FEES, JSON.stringify(data.fees));
+    if (data.courseAttendance) sessionStorage.setItem(STORAGE_KEYS.COURSE_ATTENDANCE, JSON.stringify(data.courseAttendance));
     if (data.recentNotices) sessionStorage.setItem(STORAGE_KEYS.RECENT_NOTICES, JSON.stringify(data.recentNotices));
     if (data.hallNotices) sessionStorage.setItem(STORAGE_KEYS.HALL_NOTICES, JSON.stringify(data.hallNotices));
     sessionStorage.setItem(SESSION_ACTIVITY_KEY, String(Date.now()));
@@ -219,9 +228,10 @@ export default function App() {
       getStudentProfile(savedToken, savedId).catch(() => null),
       getCourseMarks(savedToken, savedId).catch(() => null),
       getFeeRecords(savedToken, savedId).catch(() => null),
+      getCourseAttendance(savedToken).catch(() => []),
       getRecentNotices(savedToken).catch(() => null),
       getHallNotices(savedToken).catch(() => null),
-    ]).then(([freshProfile, freshResults, freshFees, freshRecentNotices, freshHallNotices]) => {
+    ]).then(([freshProfile, freshResults, freshFees, freshAttendance, freshRecentNotices, freshHallNotices]) => {
       if (!isMounted) return;
       if (freshProfile) {
         setState((prev) => ({
@@ -229,6 +239,7 @@ export default function App() {
           profile: freshProfile,
           results: freshResults && freshResults.length ? freshResults : prev.results,
           fees: freshFees && freshFees.length ? freshFees : prev.fees,
+          courseAttendance: freshAttendance && freshAttendance.length ? freshAttendance : prev.courseAttendance,
           recentNotices: freshRecentNotices && freshRecentNotices.length ? freshRecentNotices : prev.recentNotices,
           hallNotices: freshHallNotices && freshHallNotices.length ? freshHallNotices : prev.hallNotices,
         }));
@@ -238,6 +249,7 @@ export default function App() {
           profile: freshProfile,
           results: freshResults || undefined,
           fees: freshFees || undefined,
+          courseAttendance: freshAttendance || undefined,
           recentNotices: freshRecentNotices || undefined,
           hallNotices: freshHallNotices || undefined,
         });
@@ -284,12 +296,13 @@ export default function App() {
         return;
       }
 
-      // 3. Fetch student profile, course marks, fee records, and notices concurrently
-      const [profileData, courseMarksData, feeRecordsData, recentNoticesData, hallNoticesData] =
+      // 3. Fetch student profile, course marks, fee records, attendance, and notices concurrently
+      const [profileData, courseMarksData, feeRecordsData, courseAttendanceData, recentNoticesData, hallNoticesData] =
         await Promise.all([
           getStudentProfile(jwtToken, resolvedStudentInfoId),
           getCourseMarks(jwtToken, resolvedStudentInfoId),
           getFeeRecords(jwtToken, resolvedStudentInfoId),
+          getCourseAttendance(jwtToken),
           getRecentNotices(jwtToken),
           getHallNotices(jwtToken),
         ]);
@@ -300,6 +313,7 @@ export default function App() {
         profile: profileData,
         results: courseMarksData,
         fees: feeRecordsData,
+        courseAttendance: courseAttendanceData,
         recentNotices: recentNoticesData,
         hallNotices: hallNoticesData,
       });
@@ -311,6 +325,7 @@ export default function App() {
         profile: profileData,
         results: courseMarksData,
         fees: feeRecordsData,
+        courseAttendance: courseAttendanceData,
         recentNotices: recentNoticesData,
         hallNotices: hallNoticesData,
         activeTab: 'overview',
@@ -606,6 +621,7 @@ export default function App() {
             profile={state.profile}
             results={state.results}
             fees={state.fees}
+            courseAttendance={state.courseAttendance}
             notices={state.recentNotices}
             setActiveTab={setActiveTab}
           />
@@ -613,6 +629,14 @@ export default function App() {
 
         {state.activeTab === 'profile' && (
           <ProfileView profile={state.profile} />
+        )}
+
+        {state.activeTab === 'courses' && (
+          <CourseHistoryView
+            courseAttendance={state.courseAttendance}
+            profile={state.profile}
+            companyInfo={state.companyInfo}
+          />
         )}
 
         {state.activeTab === 'results' && (

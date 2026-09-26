@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { OfficeItem, EmployeeItem, StudentInfo } from '../types';
 import { TeacherProfileModal } from './TeacherProfileModal';
+import { TeacherRatingBadge } from './TeacherRatingBadge';
+import { TeacherRatingModal } from './TeacherRatingModal';
 import {
   getRuOffices,
   getRuTeachers,
@@ -78,6 +80,9 @@ export const RuDirectory: React.FC<RuDirectoryProps> = ({ profile }) => {
 
   // Selected employee for full profile modal
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeItem | null>(null);
+
+  // Selected teacher for rating modal
+  const [ratingTeacher, setRatingTeacher] = useState<EmployeeItem | null>(null);
 
   // Initial Load: Fetch Offices
   useEffect(() => {
@@ -351,6 +356,7 @@ export const RuDirectory: React.FC<RuDirectoryProps> = ({ profile }) => {
     'Lecturer',
     'Chairman'
   ];
+
 
   return (
     <div className="space-y-6">
@@ -672,7 +678,6 @@ export const RuDirectory: React.FC<RuDirectoryProps> = ({ profile }) => {
                 const designation = emp.display_designation || emp.designation || 'Faculty Member';
                 const name = emp.display_name || emp.name;
                 const email = emp.university_mail && emp.university_mail !== 'na' ? emp.university_mail : null;
-                const interestsList = parseResearchInterests(emp.research_interests);
 
                 return (
                   <div
@@ -683,99 +688,63 @@ export const RuDirectory: React.FC<RuDirectoryProps> = ({ profile }) => {
                         : 'border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700'
                     }`}
                   >
-                    <div className="space-y-3">
-                      {/* Top: Avatar & Academic Identity */}
-                      <div className="flex items-start space-x-3.5">
-                        <div className="relative shrink-0">
-                          {photoUrl ? (
-                            <img
-                              src={photoUrl}
-                              alt={name}
-                              className="w-14 h-14 rounded-full object-cover border-2 border-emerald-600/30 bg-slate-100 dark:bg-slate-800"
-                              onError={(e) => {
-                                (e.currentTarget as HTMLImageElement).src = '/assets/default-avatar.svg';
-                              }}
-                            />
-                          ) : (
-                            <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-lg border border-emerald-300 dark:border-emerald-800">
-                              {name.charAt(0)}
-                            </div>
-                          )}
-
-                          {isChairman && (
-                            <span
-                              className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-xs text-[10px]"
-                              title="Department Chairman / Head"
-                            >
-                              ★
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="space-y-1 flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-tight truncate">
-                              {name}
-                            </h4>
-                            {isChairman && (
-                              <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold rounded-md border border-amber-300 dark:border-amber-800 text-[10px]">
-                                Chairman
-                              </span>
-                            )}
+                    {/* Top: Avatar & Academic Identity */}
+                    <div className="flex items-start space-x-3.5">
+                      <div className="relative shrink-0">
+                        {photoUrl ? (
+                          <img
+                            src={photoUrl}
+                            alt={name}
+                            className="w-14 h-14 rounded-full object-cover border-2 border-emerald-600/30 bg-slate-100 dark:bg-slate-800"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = '/assets/default-avatar.svg';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-lg border border-emerald-300 dark:border-emerald-800">
+                            {name.charAt(0)}
                           </div>
+                        )}
 
-                          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 leading-snug">
-                            {designation}
-                          </p>
-
-                          {emp.office && (
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
-                              <Building2 className="w-3 h-3 shrink-0 text-slate-400" />
-                              <span className="truncate">{emp.office}</span>
-                            </p>
-                          )}
-                        </div>
+                        {isChairman && (
+                          <span
+                            className="absolute -bottom-1 -right-1 w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-xs text-[10px]"
+                            title="Department Chairman / Head"
+                          >
+                            ★
+                          </span>
+                        )}
                       </div>
 
-                      {/* Educational Credentials */}
-                      {emp.education_short && (
-                        <div className="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-lg flex items-center gap-1.5 line-clamp-1">
-                          <GraduationCap className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          <span className="truncate font-medium">{emp.education_short}</span>
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-tight truncate">
+                            {name}
+                          </h4>
+                          {isChairman && (
+                            <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold rounded-md border border-amber-300 dark:border-amber-800 text-[10px]">
+                              Chairman
+                            </span>
+                          )}
+                          <TeacherRatingBadge
+                            teacherName={name}
+                            salaryId={emp.salary_id}
+                            onClick={() => setRatingTeacher(emp)}
+                            size="sm"
+                          />
                         </div>
-                      )}
 
-                      {/* Research Interests Tags */}
-                      {interestsList.length > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
-                            Research Interest:
-                          </p>
-                          <div className="flex flex-wrap gap-1">
-                            {interestsList.slice(0, 3).map((interest, i) => (
-                              <span
-                                key={i}
-                                className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] rounded-md font-medium border border-emerald-200/60 dark:border-emerald-800/50 truncate max-w-[200px]"
-                              >
-                                {interest}
-                              </span>
-                            ))}
-                            {interestsList.length > 3 && (
-                              <span className="text-[10px] text-slate-400 self-center">
-                                +{interestsList.length - 3} more
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Office Room / Place */}
-                      {emp.office_address && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-start gap-1 line-clamp-1">
-                          <MapPin className="w-3.5 h-3.5 shrink-0 text-slate-400 mt-0.5" />
-                          <span className="truncate">{emp.office_address}</span>
+                        <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 leading-snug">
+                          {designation}
                         </p>
-                      )}
+
+                        {emp.office && (
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+                            <Building2 className="w-3 h-3 shrink-0 text-slate-400" />
+                            <span className="truncate">{emp.office}</span>
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     {/* Bottom Action Controls */}
@@ -845,6 +814,19 @@ export const RuDirectory: React.FC<RuDirectoryProps> = ({ profile }) => {
         <TeacherProfileModal
           employee={selectedEmployee}
           onClose={() => setSelectedEmployee(null)}
+          profile={profile}
+        />
+      )}
+
+      {/* Teacher Rating Modal from Directory Card */}
+      {ratingTeacher && (
+        <TeacherRatingModal
+          isOpen={!!ratingTeacher}
+          onClose={() => setRatingTeacher(null)}
+          teacherName={ratingTeacher.display_name || ratingTeacher.name}
+          salaryId={ratingTeacher.salary_id}
+          department={ratingTeacher.office}
+          profile={profile}
         />
       )}
 

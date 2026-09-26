@@ -1,12 +1,13 @@
 import React from 'react';
-import { StudentInfo, SemesterResult, FeeItem, NoticeItem, TabType } from '../types';
+import { StudentInfo, SemesterResult, FeeItem, NoticeItem, CourseAttendanceSemester, TabType } from '../types';
 import { getStudentPhotoUrl } from '../api';
-import { User, Award, BookOpen, Building2, Calendar, Receipt, Bell, ShieldCheck, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
+import { User, Award, BookOpen, Building2, Calendar, Receipt, Bell, ShieldCheck, CheckCircle2, AlertCircle, ArrowRight, Layers, CalendarCheck } from 'lucide-react';
 
 interface OverviewViewProps {
   profile: StudentInfo | null;
   results: SemesterResult[];
   fees: FeeItem[];
+  courseAttendance?: CourseAttendanceSemester[];
   notices: NoticeItem[];
   setActiveTab: (tab: TabType) => void;
 }
@@ -15,6 +16,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   profile,
   results,
   fees,
+  courseAttendance = [],
   notices,
   setActiveTab,
 }) => {
@@ -104,6 +106,33 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 transition-all shrink-0 cursor-pointer shadow-sm hover:shadow-md"
         >
           <span>Open Directory</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Course History & Attendance Quick Action Banner */}
+      <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-xs border border-teal-700/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center space-x-3.5 text-center sm:text-left">
+          <div className="w-11 h-11 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center shrink-0 border border-teal-400/30 shadow-inner">
+            <Layers className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-sm sm:text-base leading-snug flex items-center gap-2 justify-center sm:justify-start">
+              <span>Course History & Attendance</span>
+              <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-teal-500/30 text-teal-200 border border-teal-400/30">
+                RU Exam Portal
+              </span>
+            </h3>
+            <p className="text-xs text-teal-100/80 mt-0.5">
+              কোর্সের ইতিহাস, শিক্ষক পরিচিতি এবং সেমিস্টার ফাইনাল পরীক্ষার উপস্থিতির শতকরা হিসাব
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setActiveTab('courses')}
+          className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center justify-center space-x-2 transition-all shrink-0 cursor-pointer shadow-sm hover:shadow-md"
+        >
+          <span>View Course History</span>
           <ArrowRight className="w-4 h-4" />
         </button>
       </div>

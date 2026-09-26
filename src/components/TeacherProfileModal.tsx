@@ -46,6 +46,7 @@ import {
   onRatingsUpdate,
 } from '../utils/ratingsManager';
 import { TeacherRatingBadge } from './TeacherRatingBadge';
+import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
 
 interface TeacherProfileModalProps {
   employee: EmployeeItem;
@@ -188,6 +189,7 @@ export const TeacherProfileModal: React.FC<TeacherProfileModalProps> = ({ employ
   const [isEditingReview, setIsEditingReview] = useState<boolean>(false);
   const [submittingReview, setSubmittingReview] = useState<boolean>(false);
   const [deletingReview, setDeletingReview] = useState<boolean>(false);
+  const [showReviewDeleteConfirm, setShowReviewDeleteConfirm] = useState<boolean>(false);
   const [reviewSuccessMsg, setReviewSuccessMsg] = useState<string | null>(null);
 
   // Form states
@@ -266,13 +268,13 @@ export const TeacherProfileModal: React.FC<TeacherProfileModalProps> = ({ employ
     }
   };
 
-  const handleReviewDelete = async () => {
+  const handleReviewDelete = () => {
     if (!profile?.studentId) return;
-    const confirmDelete = window.confirm(
-      'আপনি কি নিশ্চিত যে আপনার দেওয়া এই শিক্ষক মূল্যায়নটি সম্পূর্ণ মুছে ফেলতে চান?'
-    );
-    if (!confirmDelete) return;
+    setShowReviewDeleteConfirm(true);
+  };
 
+  const confirmReviewDeleteAction = async () => {
+    if (!profile?.studentId) return;
     setDeletingReview(true);
     try {
       const res = await deleteTeacherRating({
@@ -281,6 +283,7 @@ export const TeacherProfileModal: React.FC<TeacherProfileModalProps> = ({ employ
         studentId: profile.studentId,
       });
       if (res.success) {
+        setShowReviewDeleteConfirm(false);
         setMyReview(null);
         setIsEditingReview(false);
         setReviewSuccessMsg('আপনার মূল্যায়ন সফলভাবে মুছে ফেলা হয়েছে।');
@@ -1681,6 +1684,14 @@ export const TeacherProfileModal: React.FC<TeacherProfileModalProps> = ({ employ
         </div>
 
       </div>
+
+      {/* Custom Confirmation Dialog for Review Deletion */}
+      <ConfirmDeleteDialog
+        isOpen={showReviewDeleteConfirm}
+        isLoading={deletingReview}
+        onConfirm={confirmReviewDeleteAction}
+        onCancel={() => setShowReviewDeleteConfirm(false)}
+      />
     </div>
   );
 };

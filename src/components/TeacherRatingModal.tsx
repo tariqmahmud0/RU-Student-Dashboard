@@ -27,6 +27,7 @@ import {
   deleteTeacherRating,
   onRatingsUpdate,
 } from '../utils/ratingsManager';
+import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
 
 interface TeacherRatingModalProps {
   isOpen: boolean;
@@ -64,6 +65,7 @@ export const TeacherRatingModal: React.FC<TeacherRatingModalProps> = ({
   const [courseCode, setCourseCode] = useState<string>(initialCourseCode || '');
   const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
 
   const isLoggedIn = !!profile?.studentId;
 
@@ -152,13 +154,13 @@ export const TeacherRatingModal: React.FC<TeacherRatingModalProps> = ({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!profile?.studentId) return;
-    const confirmDelete = window.confirm(
-      'আপনি কি নিশ্চিত যে আপনার দেওয়া এই শিক্ষক মূল্যায়নটি সম্পূর্ণ মুছে ফেলতে চান?'
-    );
-    if (!confirmDelete) return;
+    setShowDeleteConfirm(true);
+  };
 
+  const confirmDeleteAction = async () => {
+    if (!profile?.studentId) return;
     setDeleting(true);
     try {
       const res = await deleteTeacherRating({
@@ -167,6 +169,7 @@ export const TeacherRatingModal: React.FC<TeacherRatingModalProps> = ({
         studentId: profile.studentId,
       });
       if (res.success) {
+        setShowDeleteConfirm(false);
         setMyReview(null);
         setIsEditing(false);
         setSubmitSuccessMsg('আপনার মূল্যায়ন সফলভাবে মুছে ফেলা হয়েছে।');
@@ -745,6 +748,14 @@ export const TeacherRatingModal: React.FC<TeacherRatingModalProps> = ({
         </div>
 
       </div>
+
+      {/* Custom Confirmation Dialog for Rating Deletion */}
+      <ConfirmDeleteDialog
+        isOpen={showDeleteConfirm}
+        isLoading={deleting}
+        onConfirm={confirmDeleteAction}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 };
